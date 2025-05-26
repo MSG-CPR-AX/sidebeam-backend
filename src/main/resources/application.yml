@@ -1,0 +1,36 @@
+# Application Configuration
+server:
+  port: 8095
+
+spring:
+  application:
+    name: sidebar-backend
+  cache:
+    type: simple
+
+# GitLab Configuration
+gitlab:
+  # GitLab API URL (e.g., https://gitlab.com)
+  api-url: https://gitlab.com
+  # Personal Access Token with read_repository scope
+  access-token: ${GITLAB_ACCESS_TOKEN:your-access-token}
+  # Project ID or path (e.g., group/project)
+  project-id: ${GITLAB_PROJECT_ID:your-project-id}
+  # Branch name to fetch data from
+  branch: ${GITLAB_BRANCH:main}
+  # Path to bookmark data directory in the repository
+  bookmark-data-path: bookmark-data
+  # File extension to look for
+  file-extension: .yml
+
+# Cache Configuration
+cache:
+  # Enable caching of bookmark data
+  enabled: true
+  # Cache time-to-live in seconds (default: 1 hour)
+  ttl: 3600
+
+# Webhook Configuration
+webhook:
+  # Secret token for GitLab webhook validation
+  secret-token: ${WEBHOOK_SECRET_TOKEN:your-webhook-secret}
