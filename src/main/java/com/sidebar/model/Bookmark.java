@@ -9,6 +9,7 @@ import lombok.NoArgsConstructor;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Represents a bookmark entry from the YAML files.
@@ -46,14 +47,14 @@ public class Bookmark {
     private String category;
 
     /**
-     * Optional list of tags.
+     * Optional list of package nodes.
      */
-    private List<String> tags;
+    private List<PackageNode> packages;
 
     /**
-     * Optional list of package paths.
+     * Optional metadata as key-value pairs.
      */
-    private List<String> packages;
+    private Map<String, Object> meta;
 
     /**
      * The source file path where this bookmark was defined.

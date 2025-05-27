@@ -4,6 +4,8 @@ import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
 
+import java.util.ArrayList;
+import java.util.List;
 
 @Data
 @Configuration
@@ -12,7 +14,8 @@ public class GitLabProperties {
 
     private String apiUrl;
     private String accessToken;
-    private String projectId;
+    private String projectId; // Kept for backward compatibility
+    private List<String> bookmarkProjects = new ArrayList<>();
     private String branch;
     private String bookmarkDataPath;
     private String fileExtension;

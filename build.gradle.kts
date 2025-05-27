@@ -26,6 +26,10 @@ dependencies {
     implementation("org.gitlab4j:gitlab4j-api:6.0.0-rc.10")
     implementation("jakarta.ws.rs:jakarta.ws.rs-api:4.0.0")
 
+    // JSON Schema Validation
+    implementation("org.everit.json:org.everit.json.schema:1.5.1")
+    implementation("org.json:json:20231013")
+
     // Lombok
     compileOnly("org.projectlombok:lombok")
     annotationProcessor("org.projectlombok:lombok")

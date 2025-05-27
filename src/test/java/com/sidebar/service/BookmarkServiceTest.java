@@ -4,7 +4,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.sidebar.model.Bookmark;
 import com.sidebar.model.CategoryNode;
+import com.sidebar.model.PackageNode;
 import com.sidebar.service.impl.BookmarkServiceImpl;
+import com.sidebar.service.impl.SchemaValidationServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -26,6 +28,9 @@ class BookmarkServiceTest {
     @Mock
     private GitLabService gitLabService;
 
+    @Mock
+    private SchemaValidationService schemaValidationService;
+
     private BookmarkService bookmarkService;
 
     private final String TEST_YAML = """
@@ -34,12 +39,16 @@ class BookmarkServiceTest {
               url: https://docs.gitlab.com
               domain: docs.gitlab.com
               category: DevOps/GitLab
-              tags:
-                - gitlab
-                - docs
               packages:
-                - /dev/doc/gitlab
-            
+                - key: dev
+                  children:
+                    - key: doc
+                      children:
+                        - key: gitlab
+              meta:
+                priority: 1
+                owner: devops-team
+
             # Valid bookmark with minimum required fields
             - name: Google
               url: https://www.google.com
@@ -49,7 +58,7 @@ class BookmarkServiceTest {
 
     @BeforeEach
     void setUp() {
-        bookmarkService = new BookmarkServiceImpl(gitLabService);
+        bookmarkService = new BookmarkServiceImpl(gitLabService, schemaValidationService);
     }
 
     @Test
@@ -69,7 +78,7 @@ class BookmarkServiceTest {
             log.info("파일 경로: {}", path);
             log.info("파일 내용: \n{}", content);
         });
-        
+
         // BookmarkService 호출 결과 로깅
         log.info("\n===== BookmarkService.getAllBookmarks() 호출 결과 =====");
         log.info("북마크 총 개수: {}", bookmarks.size());
@@ -79,7 +88,7 @@ class BookmarkServiceTest {
             log.info("URL: {}", bookmark.getUrl());
             log.info("도메인: {}", bookmark.getDomain());
             log.info("카테고리: {}", bookmark.getCategory());
-            log.info("태그: {}", bookmark.getTags());
+            log.info("메타데이터: {}", bookmark.getMeta());
             log.info("패키지: {}", bookmark.getPackages());
             log.info("소스 경로: {}", bookmark.getSourcePath());
         });
@@ -87,23 +96,24 @@ class BookmarkServiceTest {
         // Assert
         assertNotNull(bookmarks);
         assertEquals(2, bookmarks.size());
-        
+
         Bookmark bookmark1 = bookmarks.get(0);
         assertEquals("GitLab Docs", bookmark1.getName());
         assertEquals("https://docs.gitlab.com", bookmark1.getUrl());
         assertEquals("docs.gitlab.com", bookmark1.getDomain());
         assertEquals("DevOps/GitLab", bookmark1.getCategory());
-        assertEquals(2, bookmark1.getTags().size());
+        assertNotNull(bookmark1.getMeta());
+        assertEquals(2, bookmark1.getMeta().size());
         assertEquals(1, bookmark1.getPackages().size());
-        
+
         Bookmark bookmark2 = bookmarks.get(1);
         assertEquals("Google", bookmark2.getName());
         assertEquals("https://www.google.com", bookmark2.getUrl());
         assertEquals("www.google.com", bookmark2.getDomain());
         assertEquals("Search/Engine", bookmark2.getCategory());
-        assertNull(bookmark2.getTags());
+        assertNotNull(bookmark2.getMeta());
         assertNull(bookmark2.getPackages());
-        
+
         verify(gitLabService, times(1)).fetchAllYamlFiles();
     }
 
@@ -116,17 +126,17 @@ class BookmarkServiceTest {
 
         // Act
         CategoryNode categoryTree = bookmarkService.getCategoryTree();
-        
+
         // BookmarkService 호출 결과 로깅
         log.info("\n===== BookmarkService.getCategoryTree() 호출 결과 =====");
         log.info("루트 카테고리 이름: {}", categoryTree.getName());
         log.info("카테고리 수: {}", categoryTree.getChildren().size());
-        
+
         categoryTree.getChildren().forEach(category -> {
             log.info("-------------------------------------------");
             log.info("카테고리 이름: {}", category.getName());
             log.info("하위 카테고리 수: {}", category.getChildren().size());
-            
+
             category.getChildren().forEach(subCategory -> {
                 log.info("  - 하위 카테고리: {}", subCategory.getName());
             });
@@ -136,7 +146,7 @@ class BookmarkServiceTest {
         assertNotNull(categoryTree);
         assertEquals("root", categoryTree.getName());
         assertEquals(2, categoryTree.getChildren().size());
-        
+
         // Find DevOps category
         CategoryNode devOpsNode = categoryTree.getChildren().stream()
                 .filter(node -> "DevOps".equals(node.getName()))
@@ -144,7 +154,7 @@ class BookmarkServiceTest {
                 .orElse(null);
         assertNotNull(devOpsNode);
         assertEquals(1, devOpsNode.getChildren().size());
-        
+
         // Find Search category
         CategoryNode searchNode = categoryTree.getChildren().stream()
                 .filter(node -> "Search".equals(node.getName()))
@@ -152,7 +162,7 @@ class BookmarkServiceTest {
                 .orElse(null);
         assertNotNull(searchNode);
         assertEquals(1, searchNode.getChildren().size());
-        
+
         verify(gitLabService, times(1)).fetchAllYamlFiles();
     }
 
@@ -160,12 +170,48 @@ class BookmarkServiceTest {
     void refreshBookmarks_shouldClearCache() {
         // Act
         bookmarkService.refreshBookmarks();
-        
+
         // BookmarkService 호출 결과 로깅
         log.info("\n===== BookmarkService.refreshBookmarks() 호출 결과 =====");
         log.info("캐시를 성공적으로 비웠습니다.");
-        
+
         // No assertions needed as this just evicts the cache
         // The method doesn't return anything or have observable side effects
+    }
+
+    @Test
+    void getAllBookmarks_shouldDetectDuplicateUrls() {
+        // Arrange
+        String yamlWithDuplicateUrls = """
+                # First bookmark
+                - name: GitLab Docs
+                  url: https://docs.gitlab.com
+                  domain: docs.gitlab.com
+                  category: DevOps/GitLab
+
+                # Duplicate URL
+                - name: GitLab Documentation
+                  url: https://docs.gitlab.com
+                  domain: docs.gitlab.com
+                  category: Documentation/GitLab
+                """;
+
+        Map<String, String> yamlFiles = new HashMap<>();
+        yamlFiles.put("test_bookmarks.yml", yamlWithDuplicateUrls);
+        when(gitLabService.fetchAllYamlFiles()).thenReturn(yamlFiles);
+
+        // Act & Assert
+        Exception exception = assertThrows(IllegalStateException.class, () -> {
+            bookmarkService.getAllBookmarks();
+        });
+
+        // Verify the exception message contains information about duplicate URLs
+        assertTrue(exception.getMessage().contains("Duplicate URLs found"));
+
+        // Verify that GitLabService was called
+        verify(gitLabService, times(1)).fetchAllYamlFiles();
+
+        log.info("\n===== Duplicate URL Detection Test =====");
+        log.info("Exception message: {}", exception.getMessage());
     }
 }

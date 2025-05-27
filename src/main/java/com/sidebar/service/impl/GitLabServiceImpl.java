@@ -38,12 +38,20 @@ public class GitLabServiceImpl implements GitLabService {
     @Override
     public Map<String, String> fetchAllYamlFiles() {
         Map<String, String> result = new HashMap<>();
-        List<String> filePaths = listYamlFiles();
 
-        for (String filePath : filePaths) {
-            String content = fetchYamlFile(filePath);
-            if (content != null) {
-                result.put(filePath, content);
+        // Get the list of projects to fetch from
+        List<String> projects = getProjectsList();
+
+        for (String projectId : projects) {
+            List<String> filePaths = listYamlFiles(projectId);
+
+            for (String filePath : filePaths) {
+                String content = fetchYamlFile(projectId, filePath);
+                if (content != null) {
+                    // Use project ID + file path as the key to avoid conflicts
+                    String key = projectId + ":" + filePath;
+                    result.put(key, content);
+                }
             }
         }
 
@@ -52,10 +60,22 @@ public class GitLabServiceImpl implements GitLabService {
 
     @Override
     public String fetchYamlFile(String filePath) {
+        // For backward compatibility, use the default project ID
+        return fetchYamlFile(gitLabProperties.getProjectId(), filePath);
+    }
+
+    /**
+     * Fetches a YAML file from a specific GitLab project.
+     *
+     * @param projectId The GitLab project ID or path
+     * @param filePath The path to the file in the repository
+     * @return The content of the file, or null if it couldn't be fetched
+     */
+    private String fetchYamlFile(String projectId, String filePath) {
         try {
             RepositoryFileApi repositoryApi = gitLabApi.getRepositoryFileApi();
             RepositoryFile file = repositoryApi.getFile(
-                    gitLabProperties.getProjectId(),
+                    projectId,
                     filePath,
                     gitLabProperties.getBranch());
 
@@ -64,13 +84,24 @@ public class GitLabServiceImpl implements GitLabService {
                 return new String(decodedContent);
             }
         } catch (GitLabApiException e) {
-            log.error("Error fetching YAML file from GitLab: {}", filePath, e);
+            log.error("Error fetching YAML file from GitLab project {}: {}", projectId, filePath, e);
         }
         return null;
     }
 
     @Override
     public List<String> listYamlFiles() {
+        // For backward compatibility, use the default project ID
+        return listYamlFiles(gitLabProperties.getProjectId());
+    }
+
+    /**
+     * Lists all YAML files in a specific GitLab project.
+     *
+     * @param projectId The GitLab project ID or path
+     * @return A list of file paths
+     */
+    private List<String> listYamlFiles(String projectId) {
         List<String> yamlFiles = new ArrayList<>();
         try {
             RepositoryApi repositoryApi = gitLabApi.getRepositoryApi();
@@ -79,7 +110,7 @@ public class GitLabServiceImpl implements GitLabService {
 
             // Get all files recursively
             List<TreeItem> items = repositoryApi.getTree(
-                    gitLabProperties.getProjectId(),
+                    projectId,
                     bookmarkDataPath,
                     gitLabProperties.getBranch(),
                     true);
@@ -91,8 +122,32 @@ public class GitLabServiceImpl implements GitLabService {
                     .map(TreeItem::getPath)
                     .collect(Collectors.toList());
         } catch (GitLabApiException e) {
-            log.error("Error listing YAML files from GitLab", e);
+            log.error("Error listing YAML files from GitLab project {}", projectId, e);
         }
         return yamlFiles;
+    }
+
+    /**
+     * Gets the list of GitLab projects to fetch bookmarks from.
+     * If bookmarkProjects is empty, falls back to the single projectId.
+     *
+     * @return A list of project IDs or paths
+     */
+    private List<String> getProjectsList() {
+        List<String> projects = gitLabProperties.getBookmarkProjects();
+
+        // If no projects are configured, fall back to the single project ID
+        if (projects == null || projects.isEmpty()) {
+            String projectId = gitLabProperties.getProjectId();
+            if (projectId != null && !projectId.isEmpty()) {
+                projects = new ArrayList<>();
+                projects.add(projectId);
+            } else {
+                log.warn("No GitLab projects configured for bookmark data");
+                return new ArrayList<>();
+            }
+        }
+
+        return projects;
     }
 }

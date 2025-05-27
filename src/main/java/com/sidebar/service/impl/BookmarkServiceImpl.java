@@ -5,8 +5,10 @@ import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.sidebar.config.CacheConfig;
 import com.sidebar.model.Bookmark;
 import com.sidebar.model.CategoryNode;
+import com.sidebar.model.PackageNode;
 import com.sidebar.service.BookmarkService;
 import com.sidebar.service.GitLabService;
+import com.sidebar.service.SchemaValidationService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
@@ -17,8 +19,11 @@ import org.springframework.boot.context.event.ApplicationReadyEvent;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -29,10 +34,12 @@ import java.util.stream.Collectors;
 public class BookmarkServiceImpl implements BookmarkService {
 
     private final GitLabService gitLabService;
+    private final SchemaValidationService schemaValidationService;
     private final ObjectMapper yamlMapper;
 
-    public BookmarkServiceImpl(GitLabService gitLabService) {
+    public BookmarkServiceImpl(GitLabService gitLabService, SchemaValidationService schemaValidationService) {
         this.gitLabService = gitLabService;
+        this.schemaValidationService = schemaValidationService;
         this.yamlMapper = new ObjectMapper(new YAMLFactory());
     }
 
@@ -50,18 +57,34 @@ public class BookmarkServiceImpl implements BookmarkService {
         List<Bookmark> bookmarks = new ArrayList<>();
         Map<String, String> yamlFiles = gitLabService.fetchAllYamlFiles();
 
+        // Validate all YAML files against the schema
+        try {
+            schemaValidationService.validateAllYamlFiles(yamlFiles);
+            log.info("All YAML files passed schema validation");
+        } catch (IllegalArgumentException e) {
+            log.warn("Schema validation failed: {}", e.getMessage());
+            // Continue processing even if validation fails
+        }
+
         for (Map.Entry<String, String> entry : yamlFiles.entrySet()) {
             String filePath = entry.getKey();
             String content = entry.getValue();
             try {
                 List<Bookmark> fileBookmarks = parseYamlContent(content);
-                // Set the source path for each bookmark
-                fileBookmarks.forEach(bookmark -> bookmark.setSourcePath(filePath));
+                // Set the source path for each bookmark and process packages
+                fileBookmarks.forEach(bookmark -> {
+                    bookmark.setSourcePath(filePath);
+                    // Convert string packages to PackageNode structure if needed
+                    processPackages(bookmark);
+                });
                 bookmarks.addAll(fileBookmarks);
             } catch (Exception e) {
                 log.error("Error parsing YAML file: {}", filePath, e);
             }
         }
+
+        // Check for duplicate URLs
+        checkDuplicateUrls(bookmarks);
 
         log.info("Fetched {} bookmarks from {} files", bookmarks.size(), yamlFiles.size());
         return bookmarks;
@@ -111,6 +134,82 @@ public class BookmarkServiceImpl implements BookmarkService {
     private List<Bookmark> parseYamlContent(String content) throws IOException {
         return yamlMapper.readValue(content,
                 yamlMapper.getTypeFactory().constructCollectionType(List.class, Bookmark.class));
+    }
+
+    /**
+     * Process packages for a bookmark, converting from string list to PackageNode structure if needed.
+     * This handles backward compatibility with the old format.
+     *
+     * @param bookmark The bookmark to process
+     */
+    @SuppressWarnings("unchecked")
+    private void processPackages(Bookmark bookmark) {
+        // If packages is already in the correct format, no need to process
+        if (bookmark.getPackages() != null && !bookmark.getPackages().isEmpty() 
+                && bookmark.getPackages().get(0) instanceof PackageNode) {
+            return;
+        }
+
+        // Handle the case where packages might be a List<String> from YAML
+        Object packagesObj = yamlMapper.convertValue(bookmark.getPackages(), Object.class);
+        if (packagesObj instanceof List) {
+            List<?> packagesList = (List<?>) packagesObj;
+            if (!packagesList.isEmpty() && packagesList.get(0) instanceof String) {
+                // Convert from List<String> to List<PackageNode>
+                List<String> packagePaths = (List<String>) packagesList;
+                PackageNode root = PackageNode.buildTree(packagePaths);
+                if (root.getChildren() != null && !root.getChildren().isEmpty()) {
+                    bookmark.setPackages(root.getChildren());
+                } else {
+                    bookmark.setPackages(new ArrayList<>());
+                }
+            }
+        }
+
+        // Ensure meta is initialized
+        if (bookmark.getMeta() == null) {
+            bookmark.setMeta(new HashMap<>());
+        }
+    }
+
+    /**
+     * Check for duplicate URLs across all bookmarks and log an error if any are found.
+     * This is a validation step to ensure data integrity.
+     *
+     * @param bookmarks The list of bookmarks to check
+     * @throws IllegalStateException if duplicate URLs are found
+     */
+    private void checkDuplicateUrls(List<Bookmark> bookmarks) {
+        Map<String, List<Bookmark>> urlMap = new HashMap<>();
+
+        // Group bookmarks by URL
+        for (Bookmark bookmark : bookmarks) {
+            String url = bookmark.getUrl();
+            if (!urlMap.containsKey(url)) {
+                urlMap.put(url, new ArrayList<>());
+            }
+            urlMap.get(url).add(bookmark);
+        }
+
+        // Check for duplicates
+        boolean hasDuplicates = false;
+        StringBuilder errorMessage = new StringBuilder("Duplicate URLs found:\n");
+
+        for (Map.Entry<String, List<Bookmark>> entry : urlMap.entrySet()) {
+            if (entry.getValue().size() > 1) {
+                hasDuplicates = true;
+                errorMessage.append("URL: ").append(entry.getKey()).append("\n");
+                for (Bookmark bookmark : entry.getValue()) {
+                    errorMessage.append("  - ").append(bookmark.getName())
+                            .append(" (").append(bookmark.getSourcePath()).append(")\n");
+                }
+            }
+        }
+
+        if (hasDuplicates) {
+            log.error(errorMessage.toString());
+            throw new IllegalStateException("Duplicate URLs found in bookmarks. See logs for details.");
+        }
     }
 
     /**

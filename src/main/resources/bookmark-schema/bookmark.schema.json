@@ -1,0 +1,62 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Bookmark Schema",
+  "description": "Schema for bookmark entries in YAML files",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "required": ["name", "url", "domain", "category"],
+    "properties": {
+      "name": {
+        "type": "string",
+        "description": "The name of the bookmark"
+      },
+      "url": {
+        "type": "string",
+        "format": "uri",
+        "description": "The URL of the bookmark"
+      },
+      "domain": {
+        "type": "string",
+        "description": "The domain of the URL"
+      },
+      "category": {
+        "type": "string",
+        "pattern": "^[^/]+(/[^/]+)*$",
+        "description": "The category path in format 'Parent/Child/Grandchild'"
+      },
+      "packages": {
+        "type": "array",
+        "description": "Optional list of package nodes",
+        "items": {
+          "$ref": "#/definitions/packageNode"
+        }
+      },
+      "meta": {
+        "type": "object",
+        "description": "Optional metadata as key-value pairs",
+        "additionalProperties": true
+      }
+    },
+    "additionalProperties": false
+  },
+  "definitions": {
+    "packageNode": {
+      "type": "object",
+      "required": ["key"],
+      "properties": {
+        "key": {
+          "type": "string",
+          "description": "The key of this package node"
+        },
+        "children": {
+          "type": "array",
+          "description": "The children of this package node",
+          "items": {
+            "$ref": "#/definitions/packageNode"
+          }
+        }
+      }
+    }
+  }
+}
