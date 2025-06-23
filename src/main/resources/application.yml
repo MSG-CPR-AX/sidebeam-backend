@@ -14,20 +14,32 @@ gitlab:
   api-url: https://gitlab.com
   # Personal Access Token with read_repository scope
   access-token: ${GITLAB_ACCESS_TOKEN:your-access-token}
+  # Root Group ID to fetch all subgroups and projects from
+  root-group-id: ${GITLAB_ROOT_GROUP_ID:your-root-group-id}
   # Project ID or path (e.g., group/project) - for backward compatibility
   project-id: ${GITLAB_PROJECT_ID:your-project-id}
-  # List of GitLab project paths to fetch bookmark data from
+  # List of GitLab project paths to fetch bookmark data from - for backward compatibility
   bookmark-projects:
     - ${GITLAB_PROJECT_ID:your-project-id}
     # Add more projects as needed:
     # - group/another-project
     # - group/third-project
+    # Add parent groups to access bookmark data at higher levels
+    - ${GITLAB_GROUP_ID:your-group-id}
+    # Add subgroups if needed
+    # - ${GITLAB_SUBGROUP_ID:your-subgroup-id}
+    # Add the sidebeam-data repository
+    - sidebeam/sidebeam-data
   # Branch name to fetch data from
   branch: ${GITLAB_BRANCH:main}
   # Path to bookmark data directory in the repository
-  bookmark-data-path: bookmark-data
+  # This path is used for repositories other than sidebeam-data
+  # For the sidebeam-data repository, the path is handled in the code
+  bookmark-data-path: sidebar-data/bookmark-data
   # File extension to look for
   file-extension: .yml
+  api:
+    config: classpath:/gitlab/gitlab-api.yml
 
 # Cache Configuration
 cache:

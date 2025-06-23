@@ -4,7 +4,7 @@ plugins {
     id("io.spring.dependency-management") version "1.1.7"
 }
 
-group = "com.sidebar"
+group = "com.sidebeam"
 version = "1.0-SNAPSHOT"
 java.sourceCompatibility = JavaVersion.VERSION_21
 
@@ -17,6 +17,7 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-web")
     implementation("org.springframework.boot:spring-boot-starter-cache")
     implementation("org.springframework.boot:spring-boot-starter-validation")
+    implementation("org.springframework.boot:spring-boot-starter-webflux")
 
     // YAML Processing
     implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-yaml")
