@@ -1,1 +1,1 @@
-rootProject.name = "sidebar-backend"
+rootProject.name = "sidebeam-backend"
