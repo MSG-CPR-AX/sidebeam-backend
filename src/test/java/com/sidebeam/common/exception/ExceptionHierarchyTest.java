@@ -1,0 +1,185 @@
+package com.sidebeam.common.exception;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Bean;
+import org.springframework.http.MediaType;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+
+/**
+ * 새로운 예외 계층 구조의 통합 테스트
+ */
+@WebMvcTest(controllers = {ExceptionHierarchyTest.TestController.class, GlobalExceptionHandler.class})
+public class ExceptionHierarchyTest {
+
+    @Autowired
+    private MockMvc mockMvc;
+
+    @Autowired
+    private ObjectMapper objectMapper;
+
+    /**
+     * TechnicalException 처리 테스트
+     */
+    @Test
+    public void testTechnicalExceptionHandling() throws Exception {
+        mockMvc.perform(get("/test/technical-exception"))
+                .andExpect(status().isInternalServerError())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.code").value("PROPERTY_CONVERSION_ERROR"))
+                .andExpect(jsonPath("$.message").value("프로퍼티 변환 중 오류가 발생했습니다."))
+                .andExpect(jsonPath("$.status").value(500))
+                .andExpect(jsonPath("$.path").value("/test/technical-exception"))
+                .andExpect(jsonPath("$.timestamp").exists());
+    }
+
+    /**
+     * BusinessException 처리 테스트
+     */
+    @Test
+    public void testDomainExceptionHandling() throws Exception {
+        mockMvc.perform(get("/test/domain-exception"))
+                .andExpect(status().isNotFound())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.code").value("BOOKMARK_NOT_FOUND"))
+                .andExpect(jsonPath("$.message").value("북마크를 찾을 수 없습니다."))
+                .andExpect(jsonPath("$.status").value(404))
+                .andExpect(jsonPath("$.path").value("/test/domain-exception"))
+                .andExpect(jsonPath("$.timestamp").exists());
+    }
+
+    /**
+     * ValidationException 처리 테스트
+     */
+    @Test
+    public void testValidationExceptionHandling() throws Exception {
+        mockMvc.perform(get("/test/validation-exception"))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.code").value("INVALID_PARAMETER_FORMAT"))
+                .andExpect(jsonPath("$.message").value("파라미터 형식이 올바르지 않습니다."))
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.path").value("/test/validation-exception"))
+                .andExpect(jsonPath("$.timestamp").exists());
+    }
+
+    /**
+     * TechnicalException with custom message 테스트
+     */
+    @Test
+    public void testTechnicalExceptionWithCustomMessage() throws Exception {
+        mockMvc.perform(get("/test/technical-exception-custom"))
+                .andExpect(status().isInternalServerError())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.code").value("DATA_PARSING_ERROR"))
+                .andExpect(jsonPath("$.status").value(500))
+                .andExpect(jsonPath("$.path").value("/test/technical-exception-custom"))
+                .andExpect(jsonPath("$.details").value("Custom parsing error message"))
+                .andExpect(jsonPath("$.timestamp").exists());
+    }
+
+    /**
+     * BusinessException with business rule violation 테스트
+     */
+    @Test
+    public void testDomainExceptionBusinessRule() throws Exception {
+        mockMvc.perform(get("/test/domain-exception-business-rule"))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.code").value("BUSINESS_RULE_VIOLATION"))
+                .andExpect(jsonPath("$.message").value("비즈니스 규칙 위반입니다."))
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.path").value("/test/domain-exception-business-rule"))
+                .andExpect(jsonPath("$.timestamp").exists());
+    }
+
+    /**
+     * ValidationException with parameter out of range 테스트
+     */
+    @Test
+    public void testValidationExceptionParameterRange() throws Exception {
+        mockMvc.perform(get("/test/validation-exception-range"))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.code").value("PARAMETER_OUT_OF_RANGE"))
+                .andExpect(jsonPath("$.message").value("파라미터 값이 허용 범위를 벗어났습니다."))
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.path").value("/test/validation-exception-range"))
+                .andExpect(jsonPath("$.timestamp").exists());
+    }
+
+    /**
+     * 기존 ApplicationException 호환성 테스트 (하위 호환성 확인)
+     */
+    @Test
+    public void testBusinessExceptionCompatibility() throws Exception {
+        mockMvc.perform(get("/test/business-exception-compatibility"))
+                .andExpect(status().isInternalServerError())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.code").value("INTERNAL_SERVER_ERROR"))
+                .andExpect(jsonPath("$.message").value("내부 서버 오류가 발생했습니다."))
+                .andExpect(jsonPath("$.status").value(500))
+                .andExpect(jsonPath("$.path").value("/test/business-exception-compatibility"))
+                .andExpect(jsonPath("$.timestamp").exists());
+    }
+
+    /**
+     * 테스트용 컨트롤러
+     */
+    @RestController
+    public static class TestController {
+
+        @GetMapping("/test/technical-exception")
+        public String testTechnicalException() {
+            throw new TechnicalException(ErrorCode.PROPERTY_CONVERSION_ERROR);
+        }
+
+        @GetMapping("/test/domain-exception")
+        public String testDomainException() {
+            throw new BusinessException(ErrorCode.BOOKMARK_NOT_FOUND);
+        }
+
+        @GetMapping("/test/validation-exception")
+        public String testValidationException() {
+            throw new ValidationException(ErrorCode.INVALID_PARAMETER_FORMAT);
+        }
+
+        @GetMapping("/test/technical-exception-custom")
+        public String testTechnicalExceptionCustom() {
+            throw new TechnicalException(ErrorCode.DATA_PARSING_ERROR, "Custom parsing error message");
+        }
+
+        @GetMapping("/test/domain-exception-business-rule")
+        public String testDomainExceptionBusinessRule() {
+            throw new BusinessException(ErrorCode.BUSINESS_RULE_VIOLATION);
+        }
+
+        @GetMapping("/test/validation-exception-range")
+        public String testValidationExceptionRange() {
+            throw new ValidationException(ErrorCode.PARAMETER_OUT_OF_RANGE);
+        }
+
+        @GetMapping("/test/business-exception-compatibility")
+        public String testBusinessExceptionCompatibility() {
+            // 기존 방식으로 BusinessException을 사용하려고 하면 컴파일 에러가 발생해야 함
+            // 대신 구체적인 하위 클래스를 사용해야 함
+            throw new TechnicalException("Legacy compatibility test");
+        }
+    }
+
+    @TestConfiguration
+    static class TestConfig {
+        @Bean
+        public GlobalExceptionHandler globalExceptionHandler() {
+            return new GlobalExceptionHandler();
+        }
+    }
+}
