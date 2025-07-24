@@ -42,7 +42,7 @@ public class GitLabApiClient {
     public Mono<GitLabGroupDto> getGroup(String groupId) {
         log.debug("Fetching group info for groupId: {}", groupId);
 
-        String path = apiProperties.getGroups().getGet();
+        String path = apiProperties.getGroupEndpoints().getGet();
         return gitLabWebClient.get()
                 .uri("/" + path, groupId)
                 .retrieve()
@@ -60,7 +60,7 @@ public class GitLabApiClient {
     public Flux<GitLabGroupDto> getSubgroups(String groupId) {
         log.debug("Fetching subgroups for groupId: {}", groupId);
 
-        String path = apiProperties.getGroups().getSubgroups();
+        String path = apiProperties.getGroupEndpoints().getSubgroups();
         return gitLabWebClient.get()
                 .uri(uriBuilder -> uriBuilder
                         .path("/" + path)
@@ -74,14 +74,15 @@ public class GitLabApiClient {
 
     /**
      * GitLab API를 호출하여 그룹 내 프로젝트 목록을 가져옵니다.
+     * 이 메서드는 하위 호환성을 위해 유지됩니다.
      *
      * @param groupId 그룹 ID
      * @return 프로젝트 목록
      */
-    public Flux<GitLabProjectDto> getProjects(String groupId) {
+    public Flux<GitLabProjectDto> getProjectIdListByGroupId(String groupId) {
         log.debug("Fetching projects for groupId: {}", groupId);
 
-        String path = apiProperties.getGroups().getProjects();
+        String path = apiProperties.getGroupEndpoints().getProjects();
         return gitLabWebClient.get()
                 .uri(uriBuilder -> uriBuilder
                         .path("/" + path)
@@ -95,19 +96,6 @@ public class GitLabApiClient {
     }
 
     /**
-     * GitLab API를 호출하여 그룹 내 프로젝트 목록을 가져옵니다.
-     * 이 메서드는 하위 호환성을 위해 유지됩니다.
-     *
-     * @param groupId 그룹 ID
-     * @return 프로젝트 목록
-     * @deprecated Use {@link #getProjects(String)} instead
-     */
-    @Deprecated
-    public Flux<GitLabProjectDto> retrieveProjectIdListByGroupId(String groupId) {
-        return getProjects(groupId);
-    }
-
-    /**
      * GitLab API를 호출하여 프로젝트 내 파일 목록을 가져옵니다.
      *
      * @param projectId 프로젝트 ID
@@ -118,7 +106,7 @@ public class GitLabApiClient {
     public Flux<Map> getRepositoryFiles(String projectId, String path) {
         log.debug("Fetching repository files for projectId: {}, path: {}", projectId, path);
 
-        String apiPath = apiProperties.getProjects().getRepository().getTree();
+        String apiPath = apiProperties.getProjectEndpoints().getRepository().getTree();
         return gitLabWebClient.get()
                 .uri(uriBuilder -> uriBuilder
                         .path("/" + apiPath)
@@ -142,7 +130,7 @@ public class GitLabApiClient {
     public Mono<String> getFileContent(String projectId, String filePath) {
         log.debug("Fetching file content for projectId: {}, filePath: {}", projectId, filePath);
 
-        String apiPath = apiProperties.getProjects().getRepository().getFile().getRaw();
+        String apiPath = apiProperties.getProjectEndpoints().getRepository().getFile().getRaw();
         return gitLabWebClient.get()
                 .uri(uriBuilder -> uriBuilder
                         .path("/" + apiPath)

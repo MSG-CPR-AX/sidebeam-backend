@@ -1,7 +1,7 @@
 # GitLab API Configuration
 # This file contains the API endpoint configurations for GitLab API
 
-# Groups API endpoints
+# GroupEndpoints API endpoints
 
 groups:
   # Group information API path
@@ -16,7 +16,7 @@ groups:
   # GET /api/v4/groups/{groupId}/projects
   projects: api/v4/groups/{groupId}/projects
 
-# Projects API endpoints
+# ProjectEndpoints API endpoints
 projects:
   # Project information API path
   # GET /api/v4/projects/{projectId}
@@ -34,7 +34,7 @@ projects:
       # GET /api/v4/projects/{projectId}/repository/files/{filePath}/raw
       raw: api/v4/projects/{projectId}/repository/files/{filePath}/raw
 
-# Files API endpoints
+# FileEndpoints API endpoints
 files:
   # File information API path
   # GET /api/v4/projects/{projectId}/repository/files/{filePath}

@@ -6,6 +6,7 @@ import com.sidebeam.bookmark.component.SpringCacheManager;
 import com.sidebeam.external.gitlab.config.GitLabProperties;
 import com.sidebeam.bookmark.service.GitLabService;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 
@@ -40,40 +41,39 @@ public class GitLabServiceImpl implements GitLabService {
         this.springCacheManager = springCacheManager;
     }
 
-    @Override
-    public Map<String, String> fetchAllYamlFiles() {
+    public Map<String, String> retrieveAllYamlFiles() {
         return springCacheManager.getCachedData(Map.class)
-                .switchIfEmpty(this.fetchAndCacheAllYamlFiles())
+                .switchIfEmpty(this.retrieveAndCacheAllYamlFiles())
                 .block();
     }
 
-    private Mono<Map<String, String>> fetchAndCacheAllYamlFiles() {
+    private Mono<Map<String, String>> retrieveAndCacheAllYamlFiles() {
         log.info("GitLab API를 통해 모든 YAML 파일 가져오기");
 
         String rootGroupId = gitLabProperties.getRootGroupId();
-        if (rootGroupId == null || rootGroupId.isEmpty()) {
+        if (StringUtils.isEmpty(rootGroupId)) {
             log.error("루트 그룹 ID가 설정되지 않았습니다");
             return Mono.just(new HashMap<>());
         }
 
-        return gitLabApiClient.retrieveProjectIdListByGroupId(rootGroupId)
-                .flatMap(fileRetriever::getProjectFiles)  // 위임
+        return gitLabApiClient.getProjectIdListByGroupId(rootGroupId)
+                .flatMap(fileRetriever::retrieverProjectFiles)  // 위임
                 .collectList()
                 .map(fileRetriever::mergeProjectFiles)    // 위임
-                .flatMap(fileRetriever::fetchFileContents) // 위임
+                .flatMap(fileRetriever::retrieveFileContents) // 위임
                 .flatMap(springCacheManager::cacheData);
     }
 
     @Override
-    public String fetchYamlFile(String filePath) {
-        return fileRetriever.fetchSingleFileContent(
+    public String retrieveYamlFile(String filePath) {
+        return fileRetriever.retrieveSingleFileContent(
                         gitLabProperties.getProjectId(), filePath)
                 .block();
     }
 
     @Override
-    public List<String> listYamlFiles() {
-        return fileRetriever.listProjectFiles(gitLabProperties.getProjectId())
+    public List<String> retrieveYamlFiles() {
+        return fileRetriever.retrieveProjectFiles(gitLabProperties.getProjectId())
                 .collectList()
                 .block();
     }

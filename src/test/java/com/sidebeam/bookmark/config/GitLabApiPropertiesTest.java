@@ -14,39 +14,39 @@ class GitLabApiPropertiesTest {
 
     @Test
     void testGitLabApiPropertiesLoaded() {
-        // 초기화 메서드 수동 호출
+        // PropertyUtil을 사용한 개선된 방식으로 초기화
         try {
             properties.afterPropertiesSet();
         } catch (Exception e) {
             fail("Failed to initialize GitLabApiProperties: " + e.getMessage());
         }
-        
+
         // 속성이 로드되었는지 확인
         assertNotNull(properties);
 
         // 그룹 속성 확인
-        assertNotNull(properties.getGroups());
-        assertEquals("api/v4/groups/{groupId}", properties.getGroups().getGet());
-        assertEquals("api/v4/groups/{groupId}/subgroups", properties.getGroups().getSubgroups());
-        assertEquals("api/v4/groups/{groupId}/projects", properties.getGroups().getProjects());
+        assertNotNull(properties.getGroupEndpoints());
+        assertEquals("api/v4/groups/{groupId}", properties.getGroupEndpoints().getGet());
+        assertEquals("api/v4/groups/{groupId}/subgroups", properties.getGroupEndpoints().getSubgroups());
+        assertEquals("api/v4/groups/{groupId}/projects", properties.getGroupEndpoints().getProjects());
 
         // 프로젝트 속성 확인
-        assertNotNull(properties.getProjects());
-        assertEquals("api/v4/projects/{projectId}", properties.getProjects().getGet());
+        assertNotNull(properties.getProjectEndpoints());
+        assertEquals("api/v4/projects/{projectId}", properties.getProjectEndpoints().getGet());
 
         // 저장소 속성 확인
-        assertNotNull(properties.getProjects().getRepository());
+        assertNotNull(properties.getProjectEndpoints().getRepository());
         assertEquals("api/v4/projects/{projectId}/repository/tree", 
-                properties.getProjects().getRepository().getTree());
+                properties.getProjectEndpoints().getRepository().getTree());
 
         // 파일 속성 확인
-        assertNotNull(properties.getProjects().getRepository().getFile());
+        assertNotNull(properties.getProjectEndpoints().getRepository().getFile());
         assertEquals("api/v4/projects/{projectId}/repository/files/{filePath}/raw", 
-                properties.getProjects().getRepository().getFile().getRaw());
+                properties.getProjectEndpoints().getRepository().getFile().getRaw());
 
         // 파일 API 속성 확인
-        assertNotNull(properties.getFiles());
+        assertNotNull(properties.getFileEndpoints());
         assertEquals("api/v4/projects/{projectId}/repository/files/{filePath}", 
-                properties.getFiles().getGet());
+                properties.getFileEndpoints().getGet());
     }
 }

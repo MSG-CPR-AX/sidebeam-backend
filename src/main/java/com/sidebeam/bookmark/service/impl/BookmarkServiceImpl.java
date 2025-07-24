@@ -10,12 +10,11 @@ import com.sidebeam.bookmark.service.BookmarkService;
 import com.sidebeam.bookmark.service.GitLabService;
 import com.sidebeam.bookmark.service.SchemaValidationService;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
-import org.springframework.context.event.EventListener;
-import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
-import org.springframework.boot.context.event.ApplicationReadyEvent;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -35,6 +34,20 @@ public class BookmarkServiceImpl implements BookmarkService {
     private final SchemaValidationService schemaValidationService;
     private final ObjectMapper yamlMapper;
 
+    /**
+     * SonarQube S6809 이슈 해결을 위한 자기 자신 프록시 주입
+     * 
+     * Spring에서 @Cacheable과 같은 프록시 어노테이션이 적용된 메서드를 동일 클래스 내에서 호출할 때,
+     * 'this'를 통한 직접 호출은 Spring 프록시를 우회하여 어노테이션 기능이 작동하지 않습니다.
+     * 
+     * 이 문제를 해결하기 위해 자기 자신(BookmarkService 인터페이스)을 @Lazy로 주입받아
+     * Spring 프록시를 통해 메서드를 호출하도록 합니다.
+     * 
+     * @Lazy 어노테이션은 순환 참조 문제를 방지하기 위해 사용됩니다.
+     */
+    @Autowired @Lazy
+    private BookmarkService self;
+
     public BookmarkServiceImpl(GitLabService gitLabService, SchemaValidationService schemaValidationService) {
         this.gitLabService = gitLabService;
         this.schemaValidationService = schemaValidationService;
@@ -50,10 +63,10 @@ public class BookmarkServiceImpl implements BookmarkService {
      */
     @Override
     @Cacheable(CacheConfig.BOOKMARKS_CACHE)
-    public List<Bookmark> getAllBookmarks() {
+    public List<Bookmark> retrieveAllBookmarks() {
         log.info("Fetching all bookmarks from GitLab");
         List<Bookmark> bookmarks = new ArrayList<>();
-        Map<String, String> yamlFiles = gitLabService.fetchAllYamlFiles();
+        Map<String, String> yamlFiles = gitLabService.retrieveAllYamlFiles();
 
         // Validate all YAML files against the schema
         try {
@@ -103,15 +116,19 @@ public class BookmarkServiceImpl implements BookmarkService {
      * 북마크 데이터를 기반으로 카테고리 트리를 생성하여 반환하는 메서드입니다.
      * 이 메서드는 캐시를 활용하여 성능을 최적화하며, 북마크 데이터를 가져와
      * 카테고리 리스트를 추출하고 이를 트리 구조로 빌드합니다.
+     * 
+     * SonarQube S6809 이슈 해결: self 프록시를 통해 @Cacheable 메서드 호출
      */
     @Override
     @Cacheable(CacheConfig.CATEGORY_TREE_CACHE)
     public CategoryNode getCategoryTree() {
         log.info("Building category tree");
-        List<Bookmark> bookmarks = getAllBookmarks();
+        // self 프록시를 통해 @Cacheable 어노테이션이 적용된 메서드를 호출하여
+        // Spring AOP 프록시 메커니즘이 정상적으로 작동하도록 보장합니다.
+        List<Bookmark> bookmarks = self.retrieveAllBookmarks();
         List<String> categories = bookmarks.stream()
                 .map(Bookmark::getCategory)
-                .collect(Collectors.toList());
+                .toList();
 
         CategoryNode root = CategoryNode.buildTree(categories);
         log.info("Built category tree with {} categories", categories.size());
@@ -221,31 +238,4 @@ public class BookmarkServiceImpl implements BookmarkService {
         }
     }
 
-    /**
-     * 애플리케이션 시작 시 북마크 데이터를 초기화하고 로드하는 메서드입니다.
-     * 데이터를 로드하여 애플리케이션 내 북마크와 카테고리 트리를 준비합니다.
-     * 북마크 데이터는 외부 소스에서 가져오며, 카테고리 구조는 이를 기반으로 빌드됩니다.
-     * 애플리케이션 시작 후 바로 북마크 관리 기능이 원활히 작동하도록 보장합니다.
-     */
-    @EventListener(ApplicationReadyEvent.class)
-    public void loadBookmarksOnStartup() {
-        log.info("Loading bookmarks on startup");
-        getAllBookmarks();
-        getCategoryTree();
-    }
-
-    /**
-     * 북마크 데이터를 주기적으로 새로고침하기 위해 스케줄링된 작업입니다.
-     * 정해진 cron 표현식(매 시간 정각)에 따라 호출되며, 캐시된 북마크 데이터를 삭제하고
-     * 향후 접근 시 최신 데이터를 가져올 수 있도록 준비합니다.
-     *
-     * 목적:
-     * - 데이터의 최신 상태를 유지하기 위해 자동화된 새로고침을 제공합니다.
-     * - 캐싱된 북마크와 카테고리 트리 데이터를 무효화하여 다음 요청 시 업데이트된 데이터가 사용되도록 보장합니다.
-     */
-    @Scheduled(cron = "0 0 * * * *") // Every hour
-    public void refreshBookmarksScheduled() {
-        log.info("Scheduled refresh of bookmark data");
-        refreshBookmarks();
-    }
 }

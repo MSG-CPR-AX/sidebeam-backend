@@ -12,7 +12,7 @@ public interface BookmarkService {
      * 모든 북마크를 가져옵니다.
      * 저장된 모든 YAML 파일에서 추출한 북마크 목록을 반환합니다.
      */
-    List<Bookmark> getAllBookmarks();
+    List<Bookmark> retrieveAllBookmarks();
 
     /**
      * 북마크 카테고리를 기반으로 한 트리 구조를 생성합니다.
