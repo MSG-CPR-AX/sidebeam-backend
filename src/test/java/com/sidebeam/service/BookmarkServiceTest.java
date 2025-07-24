@@ -57,19 +57,31 @@ class BookmarkServiceTest {
 
     @BeforeEach
     void setUp() {
-        bookmarkService = new BookmarkServiceImpl(gitLabService, schemaValidationService);
+        BookmarkServiceImpl impl = new BookmarkServiceImpl(gitLabService, schemaValidationService);
+
+        // 단위 테스트 환경에서 self-injection 필드를 수동으로 설정
+        // Spring 컨테이너가 없는 환경에서 @Autowired가 작동하지 않으므로 리플렉션을 사용
+        try {
+            java.lang.reflect.Field selfField = BookmarkServiceImpl.class.getDeclaredField("self");
+            selfField.setAccessible(true);
+            selfField.set(impl, impl); // 자기 자신을 self 필드에 설정
+        } catch (Exception e) {
+            throw new RuntimeException("테스트를 위한 self 필드 설정 실패", e);
+        }
+
+        bookmarkService = impl;
     }
 
     @Test
-    void getAllBookmarks_shouldReturnBookmarks() {
+    void retrieveAllBookmarks_shouldReturnBookmarks() {
         // Arrange
         Map<String, String> yamlFiles = new HashMap<>();
         // Use the new key format: "moduleName:fileName"
         yamlFiles.put("ops:test_bookmarks.yml", TEST_YAML);
-        when(gitLabService.fetchAllYamlFiles()).thenReturn(yamlFiles);
+        when(gitLabService.retrieveAllYamlFiles()).thenReturn(yamlFiles);
 
         // Act
-        List<Bookmark> bookmarks = bookmarkService.getAllBookmarks();
+        List<Bookmark> bookmarks = bookmarkService.retrieveAllBookmarks();
 
         // GitLabService 호출 결과 로깅
         log.info("===== GitLabService.fetchAllYamlFiles() 호출 결과 =====");
@@ -120,7 +132,7 @@ class BookmarkServiceTest {
         assertEquals("ops", bookmark2.getMeta().get("module"));
         assertNull(bookmark2.getPackages());
 
-        verify(gitLabService, times(1)).fetchAllYamlFiles();
+        verify(gitLabService, times(1)).retrieveAllYamlFiles();
     }
 
     @Test
@@ -129,7 +141,7 @@ class BookmarkServiceTest {
         Map<String, String> yamlFiles = new HashMap<>();
         // Use the new key format: "moduleName:fileName"
         yamlFiles.put("ops:test_bookmarks.yml", TEST_YAML);
-        when(gitLabService.fetchAllYamlFiles()).thenReturn(yamlFiles);
+        when(gitLabService.retrieveAllYamlFiles()).thenReturn(yamlFiles);
 
         // Act
         CategoryNode categoryTree = bookmarkService.getCategoryTree();
@@ -170,7 +182,7 @@ class BookmarkServiceTest {
         assertNotNull(searchNode);
         assertEquals(1, searchNode.getChildren().size());
 
-        verify(gitLabService, times(1)).fetchAllYamlFiles();
+        verify(gitLabService, times(1)).retrieveAllYamlFiles();
     }
 
     @Test
@@ -187,7 +199,7 @@ class BookmarkServiceTest {
     }
 
     @Test
-    void getAllBookmarks_shouldDetectDuplicateUrls() {
+    void retrieveAllBookmarks_shouldDetectDuplicateUrls() {
         // Arrange
         String yamlWithDuplicateUrls = """
                 # First bookmark
@@ -206,18 +218,18 @@ class BookmarkServiceTest {
         Map<String, String> yamlFiles = new HashMap<>();
         // Use the new key format: "moduleName:fileName"
         yamlFiles.put("ops:test_bookmarks.yml", yamlWithDuplicateUrls);
-        when(gitLabService.fetchAllYamlFiles()).thenReturn(yamlFiles);
+        when(gitLabService.retrieveAllYamlFiles()).thenReturn(yamlFiles);
 
         // Act & Assert
         Exception exception = assertThrows(IllegalStateException.class, () -> {
-            bookmarkService.getAllBookmarks();
+            bookmarkService.retrieveAllBookmarks();
         });
 
         // Verify the exception message contains information about duplicate URLs
         assertTrue(exception.getMessage().contains("Duplicate URLs found"));
 
         // Verify that GitLabService was called
-        verify(gitLabService, times(1)).fetchAllYamlFiles();
+        verify(gitLabService, times(1)).retrieveAllYamlFiles();
 
         log.info("\n===== Duplicate URL Detection Test =====");
         log.info("Exception message: {}", exception.getMessage());

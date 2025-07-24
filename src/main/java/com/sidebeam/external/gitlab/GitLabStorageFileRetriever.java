@@ -27,7 +27,7 @@ public class GitLabStorageFileRetriever {
     /**
      * 프로젝트에서 YAML 파일 목록을 가져옵니다.
      */
-    public Mono<Map<String, List<String>>> getProjectFiles(GitLabProjectDto project) {
+    public Mono<Map<String, List<String>>> retrieverProjectFiles(GitLabProjectDto project) {
         String projectId = project.id().toString();
         String projectPath = project.pathWithNamespace();
         log.info("프로젝트 {}의 파일 목록 가져오기", projectPath);
@@ -41,7 +41,7 @@ public class GitLabStorageFileRetriever {
                 .flatMap(file -> {
                     if (isDirectory(file)) {
                         String path = (String) file.get("path");
-                        return getFilesInDirectory(projectId, path);
+                        return retrieveFilesInDirectory(projectId, path);
                     } else {
                         return Flux.just((String) file.get("path"));
                     }
@@ -57,7 +57,7 @@ public class GitLabStorageFileRetriever {
     /**
      * 지정된 디렉토리 내의 파일 목록을 가져옵니다.
      */
-    private Flux<String> getFilesInDirectory(String projectId, String directoryPath) {
+    private Flux<String> retrieveFilesInDirectory(String projectId, String directoryPath) {
         return gitLabApiClient.getRepositoryFiles(projectId, directoryPath)
                 .filter(subFile -> {
                     String name = (String) subFile.get("name");
@@ -69,7 +69,7 @@ public class GitLabStorageFileRetriever {
     /**
      * 각 프로젝트의 파일 내용을 가져옵니다.
      */
-    public Mono<Map<String, String>> fetchFileContents(Map<String, List<String>> projectFiles) {
+    public Mono<Map<String, String>> retrieveFileContents(Map<String, List<String>> projectFiles) {
         Map<String, String> result = new ConcurrentHashMap<>();
         List<Mono<Map.Entry<String, String>>> fileContentMonos = new ArrayList<>();
 
@@ -101,14 +101,14 @@ public class GitLabStorageFileRetriever {
     /**
      * 단일 파일 내용을 가져옵니다.
      */
-    public Mono<String> fetchSingleFileContent(String projectId, String filePath) {
+    public Mono<String> retrieveSingleFileContent(String projectId, String filePath) {
         return gitLabApiClient.getFileContentViaOpenUrl(projectId, filePath);
     }
 
     /**
      * 프로젝트의 파일 목록을 가져옵니다.
      */
-    public Flux<String> listProjectFiles(String projectId) {
+    public Flux<String> retrieveProjectFiles(String projectId) {
         return gitLabApiClient.getRepositoryFiles(projectId, "")
                 .filter(file -> {
                     String name = (String) file.get("name");

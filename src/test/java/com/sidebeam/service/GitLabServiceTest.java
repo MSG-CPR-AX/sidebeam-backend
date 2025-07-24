@@ -2,8 +2,9 @@ package com.sidebeam.service;
 
 import com.sidebeam.external.gitlab.GitLabApiClient;
 import com.sidebeam.bookmark.component.SpringCacheManager;
-import com.sidebeam.external.gitlab.GitLabDataAggregator;
+import com.sidebeam.external.gitlab.GitLabStorageFileRetriever;
 import com.sidebeam.external.gitlab.config.GitLabProperties;
+import com.sidebeam.external.gitlab.dto.GitLabProjectDto;
 import com.sidebeam.bookmark.service.GitLabService;
 import com.sidebeam.bookmark.service.impl.GitLabServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
@@ -30,7 +31,7 @@ class GitLabServiceTest {
     private GitLabApiClient gitLabApiClient;
 
     @Mock
-    private GitLabDataAggregator gitLabDataAggregator;
+    private GitLabStorageFileRetriever gitLabStorageFileRetriever;
 
     @Mock
     private SpringCacheManager springCacheManager;
@@ -45,13 +46,13 @@ class GitLabServiceTest {
         gitLabService = new GitLabServiceImpl(
                 gitLabProperties,
                 gitLabApiClient,
-                gitLabDataAggregator,
+                gitLabStorageFileRetriever,
                 springCacheManager
         );
     }
 
     @Test
-    void fetchAllYamlFiles_shouldReturnCachedData_whenCacheHit() {
+    void retrieveAllYamlFiles_shouldReturnCachedData_whenCacheHit() {
         // Arrange
         Map<String, String> cachedData = new HashMap<>();
         cachedData.put("file1.yml", "content1");
@@ -60,7 +61,7 @@ class GitLabServiceTest {
         when(springCacheManager.getCachedData(Map.class)).thenReturn(Mono.just(cachedData));
 
         // Act
-        Map<String, String> result = gitLabService.fetchAllYamlFiles();
+        Map<String, String> result = gitLabService.retrieveAllYamlFiles();
 
         // Assert
         assertNotNull(result);
@@ -69,56 +70,48 @@ class GitLabServiceTest {
         assertEquals("content2", result.get("file2.yml"));
 
         verify(springCacheManager, times(1)).getCachedData(Map.class);
-        verify(gitLabApiClient, never()).retrieveProjectIdListByGroupId(anyString());
+        verify(gitLabApiClient, never()).getProjectIdListByGroupId(anyString());
     }
 
     @Test
-    void fetchAllYamlFiles_shouldFetchFromGitLab_whenCacheMiss() {
+    void fetchAllYamlFiles_shouldRetrieveFromGitLab_whenCacheMiss() {
         // Arrange
         when(springCacheManager.getCachedData(Map.class)).thenReturn(Mono.empty());
         when(gitLabProperties.getRootGroupId()).thenReturn("root-group-id");
-        when(gitLabProperties.getFileExtension()).thenReturn(".yml");
 
         // Mock project data
-        Map<String, Object> project = new HashMap<>();
-        project.put("id", "123");
-        project.put("path_with_namespace", "group/project");
-        when(gitLabApiClient.retrieveProjectIdListByGroupId("root-group-id")).thenReturn(Flux.just(project));
+        GitLabProjectDto project = new GitLabProjectDto(
+                123L, "description", "main", "private", 
+                "ssh://git@gitlab.com/group/project.git", 
+                "https://gitlab.com/group/project.git",
+                "https://gitlab.com/group/project", 
+                "https://gitlab.com/group/project/-/blob/main/README.md",
+                List.of(), null, "project", "group/project", 
+                "project", "group/project", null, null, null, null
+        );
+        when(gitLabApiClient.getProjectIdListByGroupId("root-group-id")).thenReturn(Flux.just(project));
 
-        // Mock repository files
-        Map<String, Object> file1 = new HashMap<>();
-        file1.put("name", "file1.yml");
-        file1.put("path", "file1.yml");
-        file1.put("type", "blob");
+        // Mock file retriever methods
+        Map<String, List<String>> projectFiles = new HashMap<>();
+        projectFiles.put("123", List.of("file1.yml", "dir/file2.yml"));
+        when(gitLabStorageFileRetriever.retrieverProjectFiles(project))
+                .thenReturn(Mono.just(projectFiles));
 
-        Map<String, Object> directory = new HashMap<>();
-        directory.put("name", "dir");
-        directory.put("path", "dir");
-        directory.put("type", "tree");
-
-        when(gitLabApiClient.getRepositoryFiles("123", "")).thenReturn(Flux.just(file1, directory));
-
-        Map<String, Object> file2 = new HashMap<>();
-        file2.put("name", "file2.yml");
-        file2.put("path", "dir/file2.yml");
-        file2.put("type", "blob");
-
-        when(gitLabApiClient.getRepositoryFiles("123", "dir")).thenReturn(Flux.just(file2));
+        when(gitLabStorageFileRetriever.mergeProjectFiles(List.of(projectFiles)))
+                .thenReturn(projectFiles);
 
         // Mock file contents
-        when(gitLabApiClient.getFileContentViaOpenUrl("123", "file1.yml"))
-                .thenReturn(Mono.just("content1"));
-        when(gitLabApiClient.getFileContentViaOpenUrl("123", "dir/file2.yml"))
-                .thenReturn(Mono.just("content2"));
-
-        // Mock cache
         Map<String, String> resultMap = new HashMap<>();
         resultMap.put("file1.yml", "content1");
         resultMap.put("dir/file2.yml", "content2");
-        when(springCacheManager.cacheData(any(Map.class))).thenReturn(Mono.just(resultMap));
+        when(gitLabStorageFileRetriever.retrieveFileContents(projectFiles))
+                .thenReturn(Mono.just(resultMap));
+
+        // Mock cache
+        when(springCacheManager.cacheData(resultMap)).thenReturn(Mono.just(resultMap));
 
         // Act
-        Map<String, String> result = gitLabService.fetchAllYamlFiles();
+        Map<String, String> result = gitLabService.retrieveAllYamlFiles();
 
         // Assert
         assertNotNull(result);
@@ -127,12 +120,11 @@ class GitLabServiceTest {
         assertEquals("content2", result.get("dir/file2.yml"));
 
         verify(springCacheManager, times(1)).getCachedData(Map.class);
-        verify(gitLabApiClient, times(1)).retrieveProjectIdListByGroupId("root-group-id");
-        verify(gitLabApiClient, times(1)).getRepositoryFiles("123", "");
-        verify(gitLabApiClient, times(1)).getRepositoryFiles("123", "dir");
-        verify(gitLabApiClient, times(1)).getFileContentViaOpenUrl("123", "file1.yml");
-        verify(gitLabApiClient, times(1)).getFileContentViaOpenUrl("123", "dir/file2.yml");
-        verify(springCacheManager, times(1)).cacheData(any(Map.class));
+        verify(gitLabApiClient, times(1)).getProjectIdListByGroupId("root-group-id");
+        verify(gitLabStorageFileRetriever, times(1)).retrieverProjectFiles(project);
+        verify(gitLabStorageFileRetriever, times(1)).mergeProjectFiles(any());
+        verify(gitLabStorageFileRetriever, times(1)).retrieveFileContents(projectFiles);
+        verify(springCacheManager, times(1)).cacheData(resultMap);
     }
 
     @Test
@@ -143,47 +135,35 @@ class GitLabServiceTest {
         String content = "file content";
 
         when(gitLabProperties.getProjectId()).thenReturn(projectId);
-        when(gitLabApiClient.getFileContentViaOpenUrl(projectId, filePath)).thenReturn(Mono.just(content));
+        when(gitLabStorageFileRetriever.retrieveSingleFileContent(projectId, filePath)).thenReturn(Mono.just(content));
 
         // Act
-        String result = gitLabService.fetchYamlFile(filePath);
+        String result = gitLabService.retrieveYamlFile(filePath);
 
         // Assert
         assertEquals(content, result);
-        verify(gitLabApiClient, times(1)).getFileContentViaOpenUrl(projectId, filePath);
+        verify(gitLabStorageFileRetriever, times(1)).retrieveSingleFileContent(projectId, filePath);
     }
 
     @Test
-    void listYamlFiles_shouldReturnFileList() {
+    void listYamlFiles_shouldReturnFileRetrieve() {
         // Arrange
         String projectId = "project-id";
         when(gitLabProperties.getProjectId()).thenReturn(projectId);
-        when(gitLabProperties.getFileExtension()).thenReturn(".yml");
 
-        Map<String, Object> file1 = new HashMap<>();
-        file1.put("name", "file1.yml");
-        file1.put("path", "file1.yml");
-
-        Map<String, Object> file2 = new HashMap<>();
-        file2.put("name", "file2.txt");
-        file2.put("path", "file2.txt");
-
-        Map<String, Object> file3 = new HashMap<>();
-        file3.put("name", "file3.yml");
-        file3.put("path", "file3.yml");
-
-        when(gitLabApiClient.getRepositoryFiles(projectId, "")).thenReturn(Flux.just(file1, file2, file3));
+        List<String> expectedFiles = List.of("file1.yml", "file3.yml");
+        when(gitLabStorageFileRetriever.retrieveProjectFiles(projectId))
+                .thenReturn(Flux.fromIterable(expectedFiles));
 
         // Act
-        List<String> result = gitLabService.listYamlFiles();
+        List<String> result = gitLabService.retrieveYamlFiles();
 
         // Assert
         assertNotNull(result);
         assertEquals(2, result.size());
         assertTrue(result.contains("file1.yml"));
         assertTrue(result.contains("file3.yml"));
-        assertFalse(result.contains("file2.txt"));
 
-        verify(gitLabApiClient, times(1)).getRepositoryFiles(projectId, "");
+        verify(gitLabStorageFileRetriever, times(1)).retrieveProjectFiles(projectId);
     }
 }
