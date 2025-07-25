@@ -1,7 +1,7 @@
 
-package com.sidebeam.external.gitlab;
+package com.sidebeam.external.gitlab.service;
 
-import com.sidebeam.external.gitlab.config.GitLabProperties;
+import com.sidebeam.external.gitlab.property.GitLabProperties;
 import com.sidebeam.external.gitlab.dto.GitLabProjectDto;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

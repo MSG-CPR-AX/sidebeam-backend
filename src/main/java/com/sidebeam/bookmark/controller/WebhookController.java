@@ -1,6 +1,6 @@
 package com.sidebeam.bookmark.controller;
 
-import com.sidebeam.external.gitlab.config.WebhookProperties;
+import com.sidebeam.external.gitlab.property.WebhookProperties;
 import com.sidebeam.bookmark.service.BookmarkService;
 import com.sidebeam.common.core.exception.BusinessException;
 import com.sidebeam.common.core.exception.ErrorCode;

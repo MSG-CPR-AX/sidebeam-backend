@@ -1,4 +1,4 @@
-package com.sidebeam.external.gitlab.config;
+package com.sidebeam.external.gitlab.property;
 
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;

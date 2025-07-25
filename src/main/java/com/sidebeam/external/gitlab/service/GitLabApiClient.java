@@ -1,10 +1,13 @@
-package com.sidebeam.external.gitlab;
+package com.sidebeam.external.gitlab.service;
 
-import com.sidebeam.external.gitlab.config.GitLabApiProperties;
-import com.sidebeam.external.gitlab.config.GitLabProperties;
+import com.sidebeam.external.gitlab.constant.GitLabApiConstants;
+import com.sidebeam.external.gitlab.property.GitLabApiProperties;
+import com.sidebeam.external.gitlab.property.GitLabProperties;
 import com.sidebeam.external.gitlab.dto.GitLabGroupDto;
 import com.sidebeam.external.gitlab.dto.GitLabProjectDto;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -67,7 +70,7 @@ public class GitLabApiClient {
         return gitLabWebClient.get()
                 .uri(uriBuilder -> uriBuilder
                         .path("/" + path)
-                        .queryParam("per_page", 100)
+                        .queryParam(GitLabApiConstants.PARAM_PER_PAGE, GitLabApiConstants.DEFAULT_PER_PAGE)
                         .build(groupId))
                 .retrieve()
                 .bodyToFlux(GitLabGroupDto.class)
@@ -90,9 +93,9 @@ public class GitLabApiClient {
         return this.paginate(page -> gitLabWebClient.get()
                 .uri(uriBuilder -> uriBuilder
                         .path("/" + path)
-                        .queryParam("per_page", 100)
-                        .queryParam("page", page)
-                        .queryParam("include_subgroups", true)
+                        .queryParam(GitLabApiConstants.PARAM_PER_PAGE, GitLabApiConstants.DEFAULT_PER_PAGE)
+                        .queryParam(GitLabApiConstants.PARAM_PAGE, page)
+                        .queryParam(GitLabApiConstants.PARAM_INCLUDE_SUBGROUPS, true)
                         .build(groupId))
                 .retrieve()
                 .toEntityList(GitLabProjectDto.class))
@@ -113,19 +116,29 @@ public class GitLabApiClient {
      * @return 파일 목록
      */
     @SuppressWarnings("unchecked")
-    public Flux<Map> getRepositoryFiles(String projectId, String path) {
+    public Flux<Map<String, Object>> getRepositoryFiles(String projectId, String path) {
         log.debug("Fetching repository files for projectId: {}, path: {}", projectId, path);
 
         String apiPath = apiProperties.getProjectEndpoints().getRepository().getTree();
-        return gitLabWebClient.get()
+        return this.paginate(page -> gitLabWebClient.get()
                 .uri(uriBuilder -> uriBuilder
                         .path("/" + apiPath)
-                        .queryParam("path", path)
-                        .queryParam("ref", gitLabProperties.getBranch())
-                        .queryParam("per_page", 100)
+                        .queryParam(GitLabApiConstants.PARAM_PATH, path)
+                        .queryParam(GitLabApiConstants.PARAM_REF, gitLabProperties.getBranch())
+                        .queryParam(GitLabApiConstants.PARAM_PER_PAGE, GitLabApiConstants.DEFAULT_PER_PAGE)
+                        .queryParam(GitLabApiConstants.PARAM_PAGE, page)
                         .build(projectId))
                 .retrieve()
-                .bodyToFlux(Map.class)
+                .onStatus(HttpStatusCode::isError, response -> {
+                    return response.bodyToMono(String.class)
+                            .flatMap(body -> Mono.error(new RuntimeException(
+                                    "GitLab API error")));
+                })
+                .toEntityList(new ParameterizedTypeReference<Map<String, Object>>() {})) // bodyToFlux 대신 toEntityList 사용
+                .flatMap(response -> 
+                    Mono.justOrEmpty(response.getBody())
+                        .flatMapMany(Flux::fromIterable)
+                        .switchIfEmpty(Flux.empty()))
                 .doOnComplete(() -> log.debug("Successfully fetched repository files for projectId: {}, path: {}", projectId, path))
                 .doOnError(error -> log.error("Error fetching repository files for projectId: {}, path: {}", projectId, path, error));
     }
@@ -144,7 +157,7 @@ public class GitLabApiClient {
         return gitLabWebClient.get()
                 .uri(uriBuilder -> uriBuilder
                         .path("/" + apiPath)
-                        .queryParam("ref", gitLabProperties.getBranch())
+                        .queryParam(GitLabApiConstants.PARAM_REF, gitLabProperties.getBranch())
                         .build(projectId, filePath))
                 .retrieve()
                 .bodyToMono(String.class)

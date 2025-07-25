@@ -1,10 +1,7 @@
-package com.sidebeam.service;
+package com.sidebeam.bookmark.service;
 
 import com.sidebeam.bookmark.dto.BookmarkDto;
 import com.sidebeam.bookmark.dto.CategoryNodeDto;
-import com.sidebeam.bookmark.service.BookmarkService;
-import com.sidebeam.bookmark.service.GitLabService;
-import com.sidebeam.bookmark.service.SchemaValidationService;
 import com.sidebeam.bookmark.service.impl.BookmarkServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

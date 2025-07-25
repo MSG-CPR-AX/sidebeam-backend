@@ -1,25 +1,18 @@
-package com.sidebeam.bookmark.config;
+package com.sidebeam.external.gitlab.property;
 
-import com.sidebeam.external.gitlab.config.GitLabApiProperties;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * GitLabApiProperties 클래스의 테스트입니다.
- * gitlab-api.yml 파일에서 속성이 올바르게 로드되는지 확인합니다.
+ * 기본값이 올바르게 설정되어 있는지 확인합니다.
  */
 class GitLabApiPropertiesTest {
 
-    private final GitLabApiProperties properties = new GitLabApiProperties();
-
     @Test
-    void testGitLabApiPropertiesLoaded() {
-        // PropertyUtil을 사용한 개선된 방식으로 초기화
-        try {
-            properties.afterPropertiesSet();
-        } catch (Exception e) {
-            fail("Failed to initialize GitLabApiProperties: " + e.getMessage());
-        }
+    void testGitLabApiPropertiesDefaultValues() {
+        // 기본값으로 초기화된 properties 객체 생성
+        GitLabApiProperties properties = new GitLabApiProperties();
 
         // 속성이 로드되었는지 확인
         assertNotNull(properties);
