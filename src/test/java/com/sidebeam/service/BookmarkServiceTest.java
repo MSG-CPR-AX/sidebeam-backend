@@ -1,7 +1,7 @@
 package com.sidebeam.service;
 
-import com.sidebeam.bookmark.domain.model.Bookmark;
-import com.sidebeam.bookmark.domain.model.CategoryNode;
+import com.sidebeam.bookmark.dto.BookmarkDto;
+import com.sidebeam.bookmark.dto.CategoryNodeDto;
 import com.sidebeam.bookmark.service.BookmarkService;
 import com.sidebeam.bookmark.service.GitLabService;
 import com.sidebeam.bookmark.service.SchemaValidationService;
@@ -81,7 +81,7 @@ class BookmarkServiceTest {
         when(gitLabService.retrieveAllYamlFiles()).thenReturn(yamlFiles);
 
         // Act
-        List<Bookmark> bookmarks = bookmarkService.retrieveAllBookmarks();
+        List<BookmarkDto> bookmarks = bookmarkService.retrieveAllBookmarks();
 
         // GitLabService 호출 결과 로깅
         log.info("===== GitLabService.fetchAllYamlFiles() 호출 결과 =====");
@@ -96,41 +96,41 @@ class BookmarkServiceTest {
         log.info("북마크 총 개수: {}", bookmarks.size());
         bookmarks.forEach(bookmark -> {
             log.info("-------------------------------------------");
-            log.info("북마크 이름: {}", bookmark.getName());
-            log.info("URL: {}", bookmark.getUrl());
-            log.info("도메인: {}", bookmark.getDomain());
-            log.info("카테고리: {}", bookmark.getCategory());
-            log.info("메타데이터: {}", bookmark.getMeta());
-            log.info("패키지: {}", bookmark.getPackages());
-            log.info("소스 경로: {}", bookmark.getSourcePath());
+            log.info("북마크 이름: {}", bookmark.name());
+            log.info("URL: {}", bookmark.url());
+            log.info("도메인: {}", bookmark.domain());
+            log.info("카테고리: {}", bookmark.category());
+            log.info("메타데이터: {}", bookmark.meta());
+            log.info("패키지: {}", bookmark.packages());
+            log.info("소스 경로: {}", bookmark.sourcePath());
         });
 
         // Assert
         assertNotNull(bookmarks);
         assertEquals(2, bookmarks.size());
 
-        Bookmark bookmark1 = bookmarks.get(0);
-        assertEquals("GitLab Docs", bookmark1.getName());
-        assertEquals("https://docs.gitlab.com", bookmark1.getUrl());
-        assertEquals("docs.gitlab.com", bookmark1.getDomain());
-        assertEquals("DevOps/GitLab", bookmark1.getCategory());
-        assertNotNull(bookmark1.getMeta());
+        BookmarkDto bookmark1 = bookmarks.get(0);
+        assertEquals("GitLab Docs", bookmark1.name());
+        assertEquals("https://docs.gitlab.com", bookmark1.url());
+        assertEquals("docs.gitlab.com", bookmark1.domain());
+        assertEquals("DevOps/GitLab", bookmark1.category());
+        assertNotNull(bookmark1.meta());
         // Now expecting 3 items in metadata: priority, owner, and module
-        assertEquals(3, bookmark1.getMeta().size());
+        assertEquals(3, bookmark1.meta().size());
         // Verify the module metadata was added correctly
-        assertEquals("ops", bookmark1.getMeta().get("module"));
-        assertEquals(1, bookmark1.getPackages().size());
+        assertEquals("ops", bookmark1.meta().get("module"));
+        assertEquals(1, bookmark1.packages().size());
 
-        Bookmark bookmark2 = bookmarks.get(1);
-        assertEquals("Google", bookmark2.getName());
-        assertEquals("https://www.google.com", bookmark2.getUrl());
-        assertEquals("www.google.com", bookmark2.getDomain());
-        assertEquals("Search/Engine", bookmark2.getCategory());
-        assertNotNull(bookmark2.getMeta());
+        BookmarkDto bookmark2 = bookmarks.get(1);
+        assertEquals("Google", bookmark2.name());
+        assertEquals("https://www.google.com", bookmark2.url());
+        assertEquals("www.google.com", bookmark2.domain());
+        assertEquals("Search/Engine", bookmark2.category());
+        assertNotNull(bookmark2.meta());
         // Verify the module metadata was added correctly
-        assertEquals(1, bookmark2.getMeta().size());
-        assertEquals("ops", bookmark2.getMeta().get("module"));
-        assertNull(bookmark2.getPackages());
+        assertEquals(1, bookmark2.meta().size());
+        assertEquals("ops", bookmark2.meta().get("module"));
+        assertNull(bookmark2.packages());
 
         verify(gitLabService, times(1)).retrieveAllYamlFiles();
     }
@@ -144,43 +144,43 @@ class BookmarkServiceTest {
         when(gitLabService.retrieveAllYamlFiles()).thenReturn(yamlFiles);
 
         // Act
-        CategoryNode categoryTree = bookmarkService.getCategoryTree();
+        CategoryNodeDto categoryTree = bookmarkService.getCategoryTree();
 
         // BookmarkService 호출 결과 로깅
         log.info("\n===== BookmarkService.getCategoryTree() 호출 결과 =====");
-        log.info("루트 카테고리 이름: {}", categoryTree.getName());
-        log.info("카테고리 수: {}", categoryTree.getChildren().size());
+        log.info("루트 카테고리 이름: {}", categoryTree.name());
+        log.info("카테고리 수: {}", categoryTree.children().size());
 
-        categoryTree.getChildren().forEach(category -> {
+        categoryTree.children().forEach(category -> {
             log.info("-------------------------------------------");
-            log.info("카테고리 이름: {}", category.getName());
-            log.info("하위 카테고리 수: {}", category.getChildren().size());
+            log.info("카테고리 이름: {}", category.name());
+            log.info("하위 카테고리 수: {}", category.children().size());
 
-            category.getChildren().forEach(subCategory -> {
-                log.info("  - 하위 카테고리: {}", subCategory.getName());
+            category.children().forEach(subCategory -> {
+                log.info("  - 하위 카테고리: {}", subCategory.name());
             });
         });
 
         // Assert
         assertNotNull(categoryTree);
-        assertEquals("root", categoryTree.getName());
-        assertEquals(2, categoryTree.getChildren().size());
+        assertEquals("root", categoryTree.name());
+        assertEquals(2, categoryTree.children().size());
 
         // Find DevOps category
-        CategoryNode devOpsNode = categoryTree.getChildren().stream()
-                .filter(node -> "DevOps".equals(node.getName()))
+        CategoryNodeDto devOpsNode = categoryTree.children().stream()
+                .filter(node -> "DevOps".equals(node.name()))
                 .findFirst()
                 .orElse(null);
         assertNotNull(devOpsNode);
-        assertEquals(1, devOpsNode.getChildren().size());
+        assertEquals(1, devOpsNode.children().size());
 
         // Find Search category
-        CategoryNode searchNode = categoryTree.getChildren().stream()
-                .filter(node -> "Search".equals(node.getName()))
+        CategoryNodeDto searchNode = categoryTree.children().stream()
+                .filter(node -> "Search".equals(node.name()))
                 .findFirst()
                 .orElse(null);
         assertNotNull(searchNode);
-        assertEquals(1, searchNode.getChildren().size());
+        assertEquals(1, searchNode.children().size());
 
         verify(gitLabService, times(1)).retrieveAllYamlFiles();
     }

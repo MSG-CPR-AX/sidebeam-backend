@@ -5,12 +5,15 @@ import com.sidebeam.external.gitlab.config.GitLabProperties;
 import com.sidebeam.external.gitlab.dto.GitLabGroupDto;
 import com.sidebeam.external.gitlab.dto.GitLabProjectDto;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 
 /**
  * GitLab API와 통신하기 위한 클라이언트 컴포넌트입니다.
@@ -83,15 +86,22 @@ public class GitLabApiClient {
         log.debug("Fetching projects for groupId: {}", groupId);
 
         String path = apiProperties.getGroupEndpoints().getProjects();
-        return gitLabWebClient.get()
+        
+        return this.paginate(page -> gitLabWebClient.get()
                 .uri(uriBuilder -> uriBuilder
                         .path("/" + path)
                         .queryParam("per_page", 100)
+                        .queryParam("page", page)
                         .queryParam("include_subgroups", true)
                         .build(groupId))
                 .retrieve()
-                .bodyToFlux(GitLabProjectDto.class)
-                .doOnComplete(() -> log.debug("Successfully fetched projects for groupId: {}", groupId))
+                .toEntityList(GitLabProjectDto.class))
+                .flatMap(response -> 
+                    Mono.justOrEmpty(response.getBody())
+                        .flatMapMany(Flux::fromIterable)
+                        .switchIfEmpty(Flux.empty())
+                )
+                .doOnComplete(() -> log.debug("Successfully fetched all projects for groupId: {}", groupId))
                 .doOnError(error -> log.error("Error fetching projects for groupId: {}", groupId, error));
     }
 
@@ -177,5 +187,18 @@ public class GitLabApiClient {
 
         String branch = gitLabProperties.getBranch();
         return String.format("%s/%s/-/raw/%s/%s", baseUrl, projectId, branch, filePath);
+    }
+
+    // 재사용 가능한 페이징 유틸리티
+    private <T> Flux<ResponseEntity<List<T>>> paginate(Function<Integer, Mono<ResponseEntity<List<T>>>> pageRequest) {
+        return Mono.just(1)
+                .expand(page -> pageRequest.apply(page)
+                        .map(response -> {
+                            String nextPage = response.getHeaders().getFirst("X-Next-Page");
+                            return nextPage != null && !nextPage.isEmpty() ? 
+                                   Integer.parseInt(nextPage) : null;
+                        })
+                        .filter(nextPage -> nextPage != null))
+                .flatMap(pageRequest);
     }
 }

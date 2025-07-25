@@ -2,7 +2,6 @@ package com.sidebeam.bookmark.controller;
 
 import com.sidebeam.bookmark.dto.BookmarkDto;
 import com.sidebeam.bookmark.dto.CategoryNodeDto;
-import com.sidebeam.bookmark.mapper.BookmarkMapper;
 import com.sidebeam.bookmark.service.BookmarkService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -37,7 +36,7 @@ public class BookmarkController {
     @Operation(summary = "Get all bookmarks", description = "Returns a list of all bookmarks from all YAML files")
     public List<BookmarkDto> retrieveAllBookmarks() {
         log.info("REST request to get all bookmarks");
-        return BookmarkMapper.toDto(bookmarkService.retrieveAllBookmarks());
+        return bookmarkService.retrieveAllBookmarks();
     }
 
     /**
@@ -51,6 +50,6 @@ public class BookmarkController {
     @Operation(summary = "Get category tree", description = "Returns a hierarchical tree of all bookmark categories")
     public CategoryNodeDto getCategoryTree() {
         log.info("REST request to get category tree");
-        return BookmarkMapper.toDto(bookmarkService.getCategoryTree());
+        return bookmarkService.getCategoryTree();
     }
 }

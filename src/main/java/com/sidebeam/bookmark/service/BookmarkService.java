@@ -2,6 +2,8 @@ package com.sidebeam.bookmark.service;
 
 import com.sidebeam.bookmark.domain.model.Bookmark;
 import com.sidebeam.bookmark.domain.model.CategoryNode;
+import com.sidebeam.bookmark.dto.BookmarkDto;
+import com.sidebeam.bookmark.dto.CategoryNodeDto;
 
 import java.util.List;
 
@@ -12,14 +14,14 @@ public interface BookmarkService {
      * 모든 북마크를 가져옵니다.
      * 저장된 모든 YAML 파일에서 추출한 북마크 목록을 반환합니다.
      */
-    List<Bookmark> retrieveAllBookmarks();
+    List<BookmarkDto> retrieveAllBookmarks();
 
     /**
      * 북마크 카테고리를 기반으로 한 트리 구조를 생성합니다.
      * 이 메서드는 북마크의 카테고리 정보를 사용하여 계층적인 카테고리 트리를 구성합니다.
      * 트리는 북마크 데이터를 탐색하고 카테고리별로 정렬하는 데 사용됩니다.
      */
-    CategoryNode getCategoryTree();
+    CategoryNodeDto getCategoryTree();
 
     /**
      * 북마크 데이터를 최신 상태로 갱신합니다.

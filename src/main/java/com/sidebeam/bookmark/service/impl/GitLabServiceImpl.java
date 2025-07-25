@@ -5,6 +5,7 @@ import com.sidebeam.external.gitlab.GitLabStorageFileRetriever;
 import com.sidebeam.common.cache.component.SpringCacheManager;
 import com.sidebeam.external.gitlab.config.GitLabProperties;
 import com.sidebeam.bookmark.service.GitLabService;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
@@ -24,22 +25,13 @@ import java.util.Map;
  */
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class GitLabServiceImpl implements GitLabService {
 
     private final GitLabProperties gitLabProperties;
     private final GitLabApiClient gitLabApiClient;
     private final GitLabStorageFileRetriever fileRetriever;  // 새로 추가
     private final SpringCacheManager springCacheManager;
-
-    public GitLabServiceImpl(GitLabProperties gitLabProperties,
-                            GitLabApiClient gitLabApiClient,
-                            GitLabStorageFileRetriever fileRetriever,
-                            SpringCacheManager springCacheManager) {
-        this.gitLabProperties = gitLabProperties;
-        this.gitLabApiClient = gitLabApiClient;
-        this.fileRetriever = fileRetriever;
-        this.springCacheManager = springCacheManager;
-    }
 
     public Map<String, String> retrieveAllYamlFiles() {
         return springCacheManager.getCachedData(Map.class)
