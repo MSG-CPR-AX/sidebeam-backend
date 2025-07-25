@@ -1,4 +1,4 @@
-package com.sidebeam.common.response;
+package com.sidebeam.common.rest.response;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import io.swagger.v3.oas.annotations.media.Schema;

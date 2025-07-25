@@ -2,7 +2,7 @@ package com.sidebeam.bookmark.service.impl;
 
 import com.sidebeam.external.gitlab.GitLabApiClient;
 import com.sidebeam.external.gitlab.GitLabStorageFileRetriever;
-import com.sidebeam.bookmark.component.SpringCacheManager;
+import com.sidebeam.common.cache.component.SpringCacheManager;
 import com.sidebeam.external.gitlab.config.GitLabProperties;
 import com.sidebeam.bookmark.service.GitLabService;
 import lombok.extern.slf4j.Slf4j;

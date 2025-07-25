@@ -1,6 +1,6 @@
 package com.sidebeam.external.gitlab.config;
 
-import com.sidebeam.common.util.PropertyUtil;
+import com.sidebeam.common.core.util.PropertyUtil;
 import lombok.Data;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

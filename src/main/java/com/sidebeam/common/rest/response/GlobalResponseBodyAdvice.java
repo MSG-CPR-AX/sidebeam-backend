@@ -1,4 +1,4 @@
-package com.sidebeam.common.response;
+package com.sidebeam.common.rest.response;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;

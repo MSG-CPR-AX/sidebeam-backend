@@ -1,6 +1,6 @@
 package com.sidebeam.common.controller;
 
-import com.sidebeam.common.response.ApiResponse;
+import com.sidebeam.common.rest.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;

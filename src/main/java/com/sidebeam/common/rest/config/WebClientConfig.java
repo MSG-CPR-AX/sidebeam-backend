@@ -1,4 +1,4 @@
-package com.sidebeam.bookmark.config;
+package com.sidebeam.common.rest.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

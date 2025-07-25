@@ -1,4 +1,4 @@
-package com.sidebeam.common.exception;
+package com.sidebeam.common.core.exception;
 
 /**
  * 입력값 유효성 검사에서 발생하는 예외를 처리하기 위한 클래스입니다.
