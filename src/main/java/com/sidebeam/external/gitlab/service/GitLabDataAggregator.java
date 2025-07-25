@@ -1,4 +1,4 @@
-package com.sidebeam.external.gitlab;
+package com.sidebeam.external.gitlab.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;

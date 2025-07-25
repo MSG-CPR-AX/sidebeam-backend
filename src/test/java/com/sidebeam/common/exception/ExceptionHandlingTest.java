@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -22,7 +23,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 /**
  * 예외 처리 시스템의 통합 테스트
  */
-@WebMvcTest(controllers = {ExceptionHandlingTest.TestController.class, GlobalExceptionHandler.class})
+@WebMvcTest(controllers = TestExceptionController.class)
+@Import(ExceptionHandlingTest.TestConfig.class)
 public class ExceptionHandlingTest {
 
     @Autowired
@@ -30,6 +32,7 @@ public class ExceptionHandlingTest {
 
     @Autowired
     private ObjectMapper objectMapper;
+
 
     /**
      * ApplicationException 처리 테스트
@@ -106,37 +109,6 @@ public class ExceptionHandlingTest {
                 .andExpect(jsonPath("$.timestamp").exists());
     }
 
-    /**
-     * 테스트용 컨트롤러
-     */
-    @RestController
-    public static class TestController {
-
-        @GetMapping("/test/business-exception")
-        public String testBusinessException() {
-            throw new BusinessException(ErrorCode.BOOKMARK_NOT_FOUND);
-        }
-
-        @GetMapping("/test/system-exception")
-        public String testSystemException() {
-            throw new SystemException(ErrorCode.GITLAB_CONNECTION_ERROR);
-        }
-
-        @GetMapping("/test/illegal-argument")
-        public String testIllegalArgumentException() {
-            throw new IllegalArgumentException("Invalid argument provided");
-        }
-
-        @GetMapping("/test/generic-exception")
-        public String testGenericException() {
-            throw new RuntimeException("Generic runtime exception");
-        }
-
-        @GetMapping("/test/missing-param")
-        public String testMissingParameter(@RequestParam String requiredParam) {
-            return "Success";
-        }
-    }
 
     @TestConfiguration
     static class TestConfig {
