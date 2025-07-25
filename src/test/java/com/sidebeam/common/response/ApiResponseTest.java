@@ -1,5 +1,6 @@
 package com.sidebeam.common.response;
 
+import com.sidebeam.common.rest.response.ApiResponse;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 

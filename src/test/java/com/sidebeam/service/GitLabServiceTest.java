@@ -1,7 +1,7 @@
 package com.sidebeam.service;
 
 import com.sidebeam.external.gitlab.GitLabApiClient;
-import com.sidebeam.bookmark.component.SpringCacheManager;
+import com.sidebeam.common.cache.component.SpringCacheManager;
 import com.sidebeam.external.gitlab.GitLabStorageFileRetriever;
 import com.sidebeam.external.gitlab.config.GitLabProperties;
 import com.sidebeam.external.gitlab.dto.GitLabProjectDto;

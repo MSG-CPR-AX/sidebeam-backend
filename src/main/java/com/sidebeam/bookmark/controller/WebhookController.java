@@ -2,9 +2,9 @@ package com.sidebeam.bookmark.controller;
 
 import com.sidebeam.external.gitlab.config.WebhookProperties;
 import com.sidebeam.bookmark.service.BookmarkService;
-import com.sidebeam.common.exception.BusinessException;
-import com.sidebeam.common.exception.ErrorCode;
-import com.sidebeam.common.exception.SystemException;
+import com.sidebeam.common.core.exception.BusinessException;
+import com.sidebeam.common.core.exception.ErrorCode;
+import com.sidebeam.common.core.exception.SystemException;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;

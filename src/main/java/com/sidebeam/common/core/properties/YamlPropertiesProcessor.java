@@ -1,4 +1,4 @@
-package com.sidebeam.common.properties;
+package com.sidebeam.common.core.properties;
 
 import org.springframework.beans.factory.config.YamlPropertiesFactoryBean;
 import org.springframework.core.io.Resource;

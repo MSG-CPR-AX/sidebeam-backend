@@ -1,4 +1,4 @@
-package com.sidebeam.common.constants;
+package com.sidebeam.common.rest.constants;
 
 /**
  * Simple replacement for HttpRequestConstants to make PropertyUtil compile.

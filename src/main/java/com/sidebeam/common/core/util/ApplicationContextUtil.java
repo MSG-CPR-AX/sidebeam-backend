@@ -1,4 +1,4 @@
-package com.sidebeam.common.util;
+package com.sidebeam.common.core.util;
 
 import org.springframework.beans.BeansException;
 import org.springframework.context.ApplicationContext;

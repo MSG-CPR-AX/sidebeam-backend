@@ -2,13 +2,15 @@ package com.sidebeam.bookmark.service.impl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
-import com.sidebeam.bookmark.config.CacheConfig;
+import com.sidebeam.common.cache.config.CacheConfig;
 import com.sidebeam.bookmark.domain.model.Bookmark;
 import com.sidebeam.bookmark.domain.model.CategoryNode;
 import com.sidebeam.bookmark.domain.model.PackageNode;
 import com.sidebeam.bookmark.service.BookmarkService;
 import com.sidebeam.bookmark.service.GitLabService;
 import com.sidebeam.bookmark.service.SchemaValidationService;
+import com.sidebeam.bookmark.util.CategoryTreeBuilder;
+import com.sidebeam.bookmark.util.PackageTreeBuilder;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.CacheEvict;
@@ -82,24 +84,11 @@ public class BookmarkServiceImpl implements BookmarkService {
             String content = entry.getValue();
             try {
                 List<Bookmark> fileBookmarks = parseYamlContent(content);
-                // Set the source path for each bookmark and process packages
-                fileBookmarks.forEach(bookmark -> {
-                    // The key is now in the format "moduleName:fileName"
-                    bookmark.setSourcePath(key);
-
-                    // Add module information to the bookmark's metadata
-                    if (bookmark.getMeta() == null) {
-                        bookmark.setMeta(new HashMap<>());
-                    }
-
-                    // Extract module name from the key
-                    String moduleName = key.contains(":") ? key.substring(0, key.indexOf(':')) : "unknown";
-                    bookmark.getMeta().put("module", moduleName);
-
-                    // Convert string packages to PackageNode structure if needed
-                    processPackages(bookmark);
-                });
-                bookmarks.addAll(fileBookmarks);
+                // Process each bookmark to set source path and module information
+                List<Bookmark> processedBookmarks = fileBookmarks.stream()
+                    .map(bookmark -> processBookmark(bookmark, key))
+                    .collect(Collectors.toList());
+                bookmarks.addAll(processedBookmarks);
             } catch (Exception e) {
                 log.error("Error parsing YAML file: {}", key, e);
             }
@@ -130,7 +119,7 @@ public class BookmarkServiceImpl implements BookmarkService {
                 .map(Bookmark::getCategory)
                 .toList();
 
-        CategoryNode root = CategoryNode.buildTree(categories);
+        CategoryNode root = CategoryTreeBuilder.buildTree(categories);
         log.info("Built category tree with {} categories", categories.size());
         return root;
     }
@@ -163,39 +152,67 @@ public class BookmarkServiceImpl implements BookmarkService {
     }
 
     /**
+     * Process a bookmark to set source path and module information.
+     * Creates a new immutable Bookmark record with the processed data.
+     *
+     * @param bookmark The original bookmark
+     * @param key The source key in format "moduleName:fileName"
+     * @return A new processed Bookmark record
+     */
+    private Bookmark processBookmark(Bookmark bookmark, String key) {
+        // Extract module name from the key
+        String moduleName = key.contains(":") ? key.substring(0, key.indexOf(':')) : "unknown";
+
+        // Create new metadata map with module information
+        Map<String, Object> newMeta = bookmark.getMeta() != null ? new HashMap<>(bookmark.getMeta()) : new HashMap<>();
+        newMeta.put("module", moduleName);
+
+        // Process packages
+        List<PackageNode> processedPackages = processPackages(bookmark.getPackages());
+
+        // Create new Bookmark with processed data
+        return Bookmark.builder()
+            .name(bookmark.getName())
+            .url(bookmark.getUrl())
+            .domain(bookmark.getDomain())
+            .category(bookmark.getCategory())
+            .packages(processedPackages)
+            .meta(newMeta)
+            .sourcePath(key) // Set source path to the key
+            .build();
+    }
+
+    /**
      * Process packages for a bookmark, converting from string list to PackageNode structure if needed.
      * This handles backward compatibility with the old format.
      *
-     * @param bookmark The bookmark to process
+     * @param packages The original packages list
+     * @return Processed list of PackageNode objects
      */
     @SuppressWarnings("unchecked")
-    private void processPackages(Bookmark bookmark) {
-        // If packages is already in the correct format, no need to process
-        if (bookmark.getPackages() != null && !bookmark.getPackages().isEmpty() 
-                && bookmark.getPackages().get(0) instanceof PackageNode) {
-            return;
+    private List<PackageNode> processPackages(List<PackageNode> packages) {
+        // If packages is already in the correct format, return as is
+        if (packages != null && !packages.isEmpty() && packages.get(0) instanceof PackageNode) {
+            return packages;
         }
 
         // Handle the case where packages might be a List<String> from YAML
-        Object packagesObj = yamlMapper.convertValue(bookmark.getPackages(), Object.class);
+        Object packagesObj = yamlMapper.convertValue(packages, Object.class);
         if (packagesObj instanceof List) {
             List<?> packagesList = (List<?>) packagesObj;
             if (!packagesList.isEmpty() && packagesList.get(0) instanceof String) {
                 // Convert from List<String> to List<PackageNode>
                 List<String> packagePaths = (List<String>) packagesList;
-                PackageNode root = PackageNode.buildTree(packagePaths);
+                PackageNode root = PackageTreeBuilder.buildTree(packagePaths);
                 if (root.getChildren() != null && !root.getChildren().isEmpty()) {
-                    bookmark.setPackages(root.getChildren());
+                    return root.getChildren();
                 } else {
-                    bookmark.setPackages(new ArrayList<>());
+                    return null;
                 }
             }
         }
 
-        // Ensure meta is initialized
-        if (bookmark.getMeta() == null) {
-            bookmark.setMeta(new HashMap<>());
-        }
+        return packages;
     }
 
     /**

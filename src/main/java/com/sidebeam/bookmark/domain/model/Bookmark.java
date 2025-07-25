@@ -1,18 +1,19 @@
 package com.sidebeam.bookmark.domain.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Pattern;
 import java.util.List;
 import java.util.Map;
 
 /**
- * Represents a bookmark entry from the YAML files.
+ * YAML 파일에서 읽어온 북마크 항목을 나타냅니다.
+ * 이는 향후 JPA Entity 사용에 적합한 클래스입니다.
  */
 @Data
 @Builder
@@ -22,43 +23,43 @@ import java.util.Map;
 public class Bookmark {
 
     /**
-     * The name of the bookmark.
+     * 북마크의 이름입니다.
      */
     @NotBlank(message = "Name is required")
     private String name;
 
     /**
-     * The URL of the bookmark.
+     * 북마크의 URL입니다.
      */
     @NotBlank(message = "URL is required")
     private String url;
 
     /**
-     * The domain of the URL.
+     * URL의 도메인입니다.
      */
     @NotBlank(message = "Domain is required")
     private String domain;
 
     /**
-     * The category path in format "Parent/Child/Grandchild".
+     * "Parent/Child/Grandchild" 형식의 카테고리 경로입니다.
      */
     @NotBlank(message = "Category is required")
     @Pattern(regexp = "^[^/]+(/[^/]+)*$", message = "Category must be in format 'Parent/Child/Grandchild'")
     private String category;
 
     /**
-     * Optional list of package nodes.
+     * 선택적 패키지 노드 목록입니다.
      */
     private List<PackageNode> packages;
 
     /**
-     * Optional metadata as key-value pairs.
+     * 키-값 쌍으로 구성된 선택적 메타데이터입니다.
      */
     private Map<String, Object> meta;
 
     /**
-     * The source file path where this bookmark was defined.
-     * This is set internally and not part of the YAML.
+     * 이 북마크가 정의된 소스 파일 경로입니다.
+     * 내부적으로 설정되며 YAML의 일부가 아닙니다.
      */
     private String sourcePath;
 }

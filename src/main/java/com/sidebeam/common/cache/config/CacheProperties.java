@@ -1,4 +1,4 @@
-package com.sidebeam.bookmark.config;
+package com.sidebeam.common.cache.config;
 
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;

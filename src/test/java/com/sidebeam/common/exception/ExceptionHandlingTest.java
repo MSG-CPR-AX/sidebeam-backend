@@ -1,6 +1,10 @@
 package com.sidebeam.common.exception;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.sidebeam.common.core.exception.BusinessException;
+import com.sidebeam.common.core.exception.ErrorCode;
+import com.sidebeam.common.core.exception.GlobalExceptionHandler;
+import com.sidebeam.common.core.exception.SystemException;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;

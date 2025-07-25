@@ -1,4 +1,4 @@
-package com.sidebeam.bookmark.config;
+package com.sidebeam.common.cache.config;
 
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.EnableCaching;

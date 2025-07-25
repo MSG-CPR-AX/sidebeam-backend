@@ -1,4 +1,4 @@
-package com.sidebeam.common.exception;
+package com.sidebeam.common.core.exception;
 
 /**
  * 시스템 레벨에서 발생하는 예외를 처리하기 위한 커스텀 예외 클래스입니다.

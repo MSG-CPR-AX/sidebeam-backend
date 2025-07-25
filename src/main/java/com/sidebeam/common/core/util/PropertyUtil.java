@@ -1,14 +1,13 @@
-package com.sidebeam.common.util;
+package com.sidebeam.common.core.util;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.PropertyNamingStrategies;
-import com.fasterxml.jackson.databind.PropertyNamingStrategy;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
-import com.sidebeam.common.constants.HttpRequestConstants;
-import com.sidebeam.common.exception.ApplicationException;
-import com.sidebeam.common.exception.SystemException;
-import com.sidebeam.common.properties.YamlPropertiesProcessor;
+import com.sidebeam.common.rest.constants.HttpRequestConstants;
+import com.sidebeam.common.core.exception.ApplicationException;
+import com.sidebeam.common.core.exception.SystemException;
+import com.sidebeam.common.core.properties.YamlPropertiesProcessor;
 import com.sidebeam.common.resource.RetryableUrlResource;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections.CollectionUtils;
@@ -40,7 +39,6 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Properties;
-import java.util.stream.Collectors;
 
 @Slf4j
 public class PropertyUtil {

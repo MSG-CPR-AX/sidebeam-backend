@@ -1,4 +1,4 @@
-package com.sidebeam.common.exception;
+package com.sidebeam.common.core.exception;
 
 import org.springframework.http.HttpStatus;
 
