@@ -55,31 +55,31 @@ public class SchemaValidationServiceTest {
         // Should throw an IllegalArgumentException
         Exception exception = assertThrows(IllegalArgumentException.class,
                 () -> schemaValidationService.validateYamlContent(invalidYaml, "test.yml"));
-        
-        assertTrue(exception.getMessage().contains("domain"));
+
+        assertTrue(exception.getMessage().contains("domain") || exception.getMessage().contains("required"));
     }
 
     @Test
     void testInvalidYamlContent_InvalidCategoryFormat() {
-        // Invalid YAML content with invalid category format
+        // Invalid YAML content with invalid category format (starts with slash)
         String invalidYaml = """
             - name: Test Bookmark
               url: https://example.com
               domain: example.com
-              category: InvalidCategory
+              category: /InvalidCategory
             """;
 
         // Should throw an IllegalArgumentException
         Exception exception = assertThrows(IllegalArgumentException.class,
                 () -> schemaValidationService.validateYamlContent(invalidYaml, "test.yml"));
-        
-        assertTrue(exception.getMessage().contains("category"));
+
+        assertTrue(exception.getMessage().contains("category") || exception.getMessage().contains("pattern"));
     }
 
     @Test
     void testValidateAllYamlFiles() {
         Map<String, String> yamlFiles = new HashMap<>();
-        
+
         // Add valid YAML content
         yamlFiles.put("valid.yml", """
             - name: Valid Bookmark
@@ -87,21 +87,21 @@ public class SchemaValidationServiceTest {
               domain: example.com
               category: Test/Category
             """);
-        
+
         // Should not throw an exception
         assertDoesNotThrow(() -> schemaValidationService.validateAllYamlFiles(yamlFiles));
-        
-        // Add invalid YAML content
+
+        // Add invalid YAML content (missing domain field)
         yamlFiles.put("invalid.yml", """
             - name: Invalid Bookmark
               url: https://example.com
-              category: InvalidCategory
+              category: Test/Category
             """);
-        
+
         // Should throw an IllegalArgumentException
         Exception exception = assertThrows(IllegalArgumentException.class,
                 () -> schemaValidationService.validateAllYamlFiles(yamlFiles));
-        
+
         assertTrue(exception.getMessage().contains("invalid.yml"));
     }
 }

@@ -2,6 +2,9 @@ package com.sidebeam.bookmark.service.impl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+import com.sidebeam.bookmark.dto.BookmarkDto;
+import com.sidebeam.bookmark.dto.CategoryNodeDto;
+import com.sidebeam.bookmark.mapper.BookmarkMapper;
 import com.sidebeam.common.cache.config.CacheConfig;
 import com.sidebeam.bookmark.domain.model.Bookmark;
 import com.sidebeam.bookmark.domain.model.CategoryNode;
@@ -65,7 +68,7 @@ public class BookmarkServiceImpl implements BookmarkService {
      */
     @Override
     @Cacheable(CacheConfig.BOOKMARKS_CACHE)
-    public List<Bookmark> retrieveAllBookmarks() {
+    public List<BookmarkDto> retrieveAllBookmarks() {
         log.info("Fetching all bookmarks from GitLab");
         List<Bookmark> bookmarks = new ArrayList<>();
         Map<String, String> yamlFiles = gitLabService.retrieveAllYamlFiles();
@@ -98,7 +101,7 @@ public class BookmarkServiceImpl implements BookmarkService {
         checkDuplicateUrls(bookmarks);
 
         log.info("Fetched {} bookmarks from {} files", bookmarks.size(), yamlFiles.size());
-        return bookmarks;
+        return BookmarkMapper.INSTANCE.toDto(bookmarks);
     }
 
     /**
@@ -110,18 +113,18 @@ public class BookmarkServiceImpl implements BookmarkService {
      */
     @Override
     @Cacheable(CacheConfig.CATEGORY_TREE_CACHE)
-    public CategoryNode getCategoryTree() {
+    public CategoryNodeDto getCategoryTree() {
         log.info("Building category tree");
         // self 프록시를 통해 @Cacheable 어노테이션이 적용된 메서드를 호출하여
         // Spring AOP 프록시 메커니즘이 정상적으로 작동하도록 보장합니다.
-        List<Bookmark> bookmarks = self.retrieveAllBookmarks();
+        List<BookmarkDto> bookmarks = self.retrieveAllBookmarks();
         List<String> categories = bookmarks.stream()
-                .map(Bookmark::getCategory)
+                .map(BookmarkDto::category)
                 .toList();
 
         CategoryNode root = CategoryTreeBuilder.buildTree(categories);
         log.info("Built category tree with {} categories", categories.size());
-        return root;
+        return BookmarkMapper.INSTANCE.toDto(root);
     }
 
     /**

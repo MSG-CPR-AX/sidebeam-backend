@@ -54,11 +54,17 @@ public class SchemaValidationServiceImpl implements SchemaValidationService {
             } catch (ValidationException e) {
                 StringBuilder errorMessage = new StringBuilder();
                 errorMessage.append("Schema validation failed for ").append(sourcePath).append(":\n");
-                
+
+                // Include the main exception message
+                if (e.getMessage() != null && !e.getMessage().isEmpty()) {
+                    errorMessage.append("- ").append(e.getMessage()).append("\n");
+                }
+
+                // Include causing exceptions
                 e.getCausingExceptions().stream()
                         .map(ValidationException::getMessage)
                         .forEach(msg -> errorMessage.append("- ").append(msg).append("\n"));
-                
+
                 log.error(errorMessage.toString());
                 throw new IllegalArgumentException(errorMessage.toString(), e);
             }
@@ -76,7 +82,7 @@ public class SchemaValidationServiceImpl implements SchemaValidationService {
         for (Map.Entry<String, String> entry : yamlFiles.entrySet()) {
             String filePath = entry.getKey();
             String content = entry.getValue();
-            
+
             try {
                 validateYamlContent(content, filePath);
             } catch (IllegalArgumentException e) {
