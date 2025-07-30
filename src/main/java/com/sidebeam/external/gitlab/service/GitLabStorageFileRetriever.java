@@ -38,14 +38,14 @@ public class GitLabStorageFileRetriever {
 
         return gitLabApiClient.getRepositoryFiles(projectId, projectPath)
                 .filter(fileDto -> {
-                    String name = (String) fileDto.getName();
-                    return name.endsWith(gitLabProperties.getFileExtension()) || isDirectory(fileDto.getType());
+                    String name = (String) fileDto.name();
+                    return name.endsWith(gitLabProperties.getFileExtension()) || isDirectory(fileDto.type());
                 })
                 .flatMap(fileDto -> {
-                    if (isDirectory(fileDto.getType())) {
-                        return this.retrieveFilesInDirectory(projectId, fileDto.getPath());
+                    if (isDirectory(fileDto.type())) {
+                        return this.retrieveFilesInDirectory(projectId, fileDto.path());
                     } else {
-                        return Flux.just((String) fileDto.getPath());
+                        return Flux.just((String) fileDto.path());
                     }
                 })
                 .collectList()
@@ -58,7 +58,7 @@ public class GitLabStorageFileRetriever {
     private Flux<String> retrieveFilesInDirectory(String projectId, String directoryPath) {
         return gitLabApiClient.getRepositoryFiles(projectId, directoryPath)
                 .filter(file -> file.hasExtension(gitLabProperties.getFileExtension()))
-                .map(GitLabFileDto::getPath);
+                .map(GitLabFileDto::path);
     }
 
     /**
@@ -69,15 +69,15 @@ public class GitLabStorageFileRetriever {
         List<Mono<FileContentDto>> fileContentMonos = new ArrayList<>();
 
         for (ProjectFilesDto projectFiles : projectFilesList) {
-            String projectId = projectFiles.getProjectId();
-            List<String> filePaths = projectFiles.getFilePaths();
+            String projectId = projectFiles.projectId();
+            List<String> filePaths = projectFiles.filePaths();
 
             for (String filePath : filePaths) {
                 Mono<FileContentDto> fileContentMono =
                         gitLabApiClient.getFileContent(projectId, filePath)
                                 .map(content -> new FileContentDto(filePath, content))
                                 .doOnSuccess(fileContent ->
-                                        log.info("파일 내용 가져옴: {}", fileContent.getFilePath()));
+                                        log.info("파일 내용 가져옴: {}", fileContent.filePath()));
 
                 fileContentMonos.add(fileContentMono);
             }
@@ -103,9 +103,9 @@ public class GitLabStorageFileRetriever {
                 .filter(file -> file.hasExtension(gitLabProperties.getFileExtension()) || file.isDirectory())
                 .flatMap(file -> {
                     if (file.isDirectory()) {
-                        return retrieveFilesInDirectory(projectId, file.getPath());
+                        return retrieveFilesInDirectory(projectId, file.path());
                     } else {
-                        return Mono.just(file.getPath());
+                        return Mono.just(file.path());
                     }
                 });
     }

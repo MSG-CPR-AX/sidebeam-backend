@@ -100,9 +100,9 @@ public class SchemaValidationServiceImpl implements SchemaValidationService {
         boolean hasErrors = false;
         StringBuilder errorMessages = new StringBuilder();
 
-        for (FileContentDto fileContent : allFilesContent.getFileContents()) {
-            String filePath = fileContent.getFilePath();
-            String content = fileContent.getContent();
+        for (FileContentDto fileContent : allFilesContent.fileContents()) {
+            String filePath = fileContent.filePath();
+            String content = fileContent.content();
 
             try {
                 this.validateYamlContent(content, filePath);

@@ -1,43 +1,41 @@
 package com.sidebeam.external.gitlab.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import lombok.Data;
 
-@Data
-public class GitLabFileDto {
-
+public record GitLabFileDto(
     /**
      * 파일 또는 디렉토리의 고유 ID
      */
-    private String id;
+    String id,
 
     /**
      * 파일 또는 디렉토리 이름
      */
-    private String name;
+    String name,
 
     /**
      * 파일 타입 (blob: 파일, tree: 디렉토리)
      * GitLab API에서 "type" 필드로 전달됨
      */
     @JsonProperty("type")
-    private String type;
+    String type,
 
     /**
      * 파일 또는 디렉토리의 전체 경로
      */
-    private String path;
+    String path,
 
     /**
      * 파일 모드 (권한 정보)
      */
-    private String mode;
+    String mode,
 
     /**
      * 웹 URL
      */
     @JsonProperty("web_url")
-    private String webUrl;
+    String webUrl
+) {
 
     /**
      * 파일이 디렉토리인지 확인하는 편의 메서드

@@ -66,9 +66,9 @@ class GitLabServiceTest {
 
         // Assert
         assertNotNull(result);
-        assertEquals(2, result.getFileContents().size());
-        assertEquals("content1", result.getFileContents().get(0).getContent());
-        assertEquals("content2", result.getFileContents().get(1).getContent());
+        assertEquals(2, result.fileContents().size());
+        assertEquals("content1", result.fileContents().get(0).content());
+        assertEquals("content2", result.fileContents().get(1).content());
 
         verify(springCacheManager, times(1)).getCachedData(AllFilesContentDto.class);
         verify(gitLabApiClient, never()).getProjectIdListByGroupId(anyString());
@@ -114,9 +114,9 @@ class GitLabServiceTest {
 
         // Assert
         assertNotNull(result);
-        assertEquals(2, result.getFileContents().size());
-        assertEquals("content1", result.getFileContents().get(0).getContent());
-        assertEquals("content2", result.getFileContents().get(1).getContent());
+        assertEquals(2, result.fileContents().size());
+        assertEquals("content1", result.fileContents().get(0).content());
+        assertEquals("content2", result.fileContents().get(1).content());
 
         verify(springCacheManager, times(1)).getCachedData(AllFilesContentDto.class);
         verify(gitLabApiClient, times(1)).getProjectIdListByGroupId("root-group-id");
