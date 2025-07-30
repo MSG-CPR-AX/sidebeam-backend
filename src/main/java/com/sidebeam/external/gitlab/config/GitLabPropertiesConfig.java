@@ -1,14 +1,13 @@
 package com.sidebeam.external.gitlab.config;
 
 import com.sidebeam.common.core.util.PropertyUtil;
-import com.sidebeam.external.gitlab.property.GitLabApiProperties;
-import com.sidebeam.external.gitlab.property.GitLabProperties;
-import com.sidebeam.external.gitlab.property.WebhookProperties;
+import com.sidebeam.external.gitlab.config.property.GitLabApiProperties;
+import com.sidebeam.external.gitlab.config.property.GitLabProperties;
+import com.sidebeam.external.gitlab.config.property.WebhookProperties;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Primary;
 
 /**
  * GitLab 관련 설정을 관리하는 구성 클래스입니다.

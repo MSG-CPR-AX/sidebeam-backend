@@ -1,13 +1,15 @@
 package com.sidebeam.bookmark.service;
 
+import com.sidebeam.bookmark.config.property.SchemaProperties;
 import com.sidebeam.bookmark.service.impl.SchemaValidationServiceImpl;
+import com.sidebeam.external.gitlab.dto.AllFilesContentDto;
+import com.sidebeam.external.gitlab.dto.FileContentDto;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -18,7 +20,9 @@ public class SchemaValidationServiceTest {
 
     @BeforeEach
     void setUp() {
-        schemaValidationService = new SchemaValidationServiceImpl();
+        SchemaProperties schemaProperties = new SchemaProperties();
+        schemaProperties.setStrictValidation(true); // Enable strict validation for tests
+        schemaValidationService = new SchemaValidationServiceImpl(schemaProperties);
     }
 
     @Test
@@ -77,29 +81,31 @@ public class SchemaValidationServiceTest {
 
     @Test
     void testValidateAllYamlFiles() {
-        Map<String, String> yamlFiles = new HashMap<>();
-
-        // Add valid YAML content
-        yamlFiles.put("valid.yml", """
+        // Create valid YAML content
+        FileContentDto validFile = new FileContentDto("valid.yml", """
             - name: Valid Bookmark
               url: https://example.com
               domain: example.com
               category: Test/Category
             """);
+        
+        AllFilesContentDto validFilesContent = new AllFilesContentDto(List.of(validFile));
 
         // Should not throw an exception
-        assertDoesNotThrow(() -> schemaValidationService.validateAllYamlFiles(yamlFiles));
+        assertDoesNotThrow(() -> schemaValidationService.validateAllYamlFiles(validFilesContent));
 
         // Add invalid YAML content (missing domain field)
-        yamlFiles.put("invalid.yml", """
+        FileContentDto invalidFile = new FileContentDto("invalid.yml", """
             - name: Invalid Bookmark
               url: https://example.com
               category: Test/Category
             """);
+        
+        AllFilesContentDto mixedFilesContent = new AllFilesContentDto(List.of(validFile, invalidFile));
 
         // Should throw an IllegalArgumentException
         Exception exception = assertThrows(IllegalArgumentException.class,
-                () -> schemaValidationService.validateAllYamlFiles(yamlFiles));
+                () -> schemaValidationService.validateAllYamlFiles(mixedFilesContent));
 
         assertTrue(exception.getMessage().contains("invalid.yml"));
     }

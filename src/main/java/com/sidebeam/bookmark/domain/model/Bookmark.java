@@ -1,6 +1,9 @@
 package com.sidebeam.bookmark.domain.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.sidebeam.bookmark.util.PackageNodeDeserializer;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import lombok.AllArgsConstructor;
@@ -50,6 +53,7 @@ public class Bookmark {
     /**
      * 선택적 패키지 노드 목록입니다.
      */
+    @JsonDeserialize(using = PackageNodeDeserializer.class)
     private List<PackageNode> packages;
 
     /**

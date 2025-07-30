@@ -1,10 +1,13 @@
 package com.sidebeam.external.gitlab.service;
 
 import com.sidebeam.external.gitlab.constant.GitLabApiConstants;
-import com.sidebeam.external.gitlab.property.GitLabApiProperties;
-import com.sidebeam.external.gitlab.property.GitLabProperties;
+import com.sidebeam.external.gitlab.config.property.GitLabApiProperties;
+import com.sidebeam.external.gitlab.config.property.GitLabProperties;
+import com.sidebeam.external.gitlab.dto.GitLabFileDto;
 import com.sidebeam.external.gitlab.dto.GitLabGroupDto;
 import com.sidebeam.external.gitlab.dto.GitLabProjectDto;
+import com.sidebeam.external.gitlab.dto.RepositoryFileDto;
+import com.sidebeam.external.gitlab.util.GitLabApiPagingUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpStatusCode;
@@ -16,6 +19,7 @@ import reactor.core.publisher.Mono;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.function.Function;
 
 /**
@@ -41,9 +45,6 @@ public class GitLabApiClient {
 
     /**
      * GitLab API를 호출하여 그룹 정보를 가져옵니다.
-     *
-     * @param groupId 그룹 ID
-     * @return 그룹 정보
      */
     public Mono<GitLabGroupDto> getGroup(String groupId) {
         log.debug("Fetching group info for groupId: {}", groupId);
@@ -81,74 +82,55 @@ public class GitLabApiClient {
     /**
      * GitLab API를 호출하여 그룹 내 프로젝트 목록을 가져옵니다.
      * 이 메서드는 하위 호환성을 위해 유지됩니다.
-     *
-     * @param groupId 그룹 ID
-     * @return 프로젝트 목록
      */
     public Flux<GitLabProjectDto> getProjectIdListByGroupId(String groupId) {
         log.debug("Fetching projects for groupId: {}", groupId);
 
         String path = apiProperties.getGroupEndpoints().getProjects();
         
-        return this.paginate(page -> gitLabWebClient.get()
-                .uri(uriBuilder -> uriBuilder
-                        .path("/" + path)
-                        .queryParam(GitLabApiConstants.PARAM_PER_PAGE, GitLabApiConstants.DEFAULT_PER_PAGE)
-                        .queryParam(GitLabApiConstants.PARAM_PAGE, page)
-                        .queryParam(GitLabApiConstants.PARAM_INCLUDE_SUBGROUPS, true)
-                        .build(groupId))
-                .retrieve()
-                .toEntityList(GitLabProjectDto.class))
-                .flatMap(response -> 
-                    Mono.justOrEmpty(response.getBody())
-                        .flatMapMany(Flux::fromIterable)
-                        .switchIfEmpty(Flux.empty())
-                )
-                .doOnComplete(() -> log.debug("Successfully fetched all projects for groupId: {}", groupId))
-                .doOnError(error -> log.error("Error fetching projects for groupId: {}", groupId, error));
+        return GitLabApiPagingUtils.paginateAll(page -> gitLabWebClient.get()
+                        .uri(uriBuilder -> uriBuilder
+                                .path("/" + path)
+                                .queryParam(GitLabApiConstants.PARAM_PER_PAGE, GitLabApiConstants.DEFAULT_PER_PAGE)
+                                .queryParam(GitLabApiConstants.PARAM_PAGE, page)
+                                .queryParam(GitLabApiConstants.PARAM_INCLUDE_SUBGROUPS, true)
+                                .build(groupId))
+                        .retrieve()
+                        .toEntityList(new ParameterizedTypeReference<List<GitLabProjectDto>>() {}))
+                        .flatMap(Flux::fromIterable); // flatten List<GitLabProjectDto> → GitLabProjectDto
     }
 
     /**
      * GitLab API를 호출하여 프로젝트 내 파일 목록을 가져옵니다.
-     *
-     * @param projectId 프로젝트 ID
-     * @param path 파일 경로
-     * @return 파일 목록
      */
-    @SuppressWarnings("unchecked")
-    public Flux<Map<String, Object>> getRepositoryFiles(String projectId, String path) {
+    public Flux<GitLabFileDto> getRepositoryFiles(String projectId, String path) {
         log.debug("Fetching repository files for projectId: {}, path: {}", projectId, path);
 
         String apiPath = apiProperties.getProjectEndpoints().getRepository().getTree();
-        return this.paginate(page -> gitLabWebClient.get()
-                .uri(uriBuilder -> uriBuilder
-                        .path("/" + apiPath)
-                        .queryParam(GitLabApiConstants.PARAM_PATH, path)
-                        .queryParam(GitLabApiConstants.PARAM_REF, gitLabProperties.getBranch())
-                        .queryParam(GitLabApiConstants.PARAM_PER_PAGE, GitLabApiConstants.DEFAULT_PER_PAGE)
-                        .queryParam(GitLabApiConstants.PARAM_PAGE, page)
-                        .build(projectId))
-                .retrieve()
-                .onStatus(HttpStatusCode::isError, response -> {
-                    return response.bodyToMono(String.class)
-                            .flatMap(body -> Mono.error(new RuntimeException(
-                                    "GitLab API error")));
-                })
-                .toEntityList(new ParameterizedTypeReference<Map<String, Object>>() {})) // bodyToFlux 대신 toEntityList 사용
-                .flatMap(response -> 
-                    Mono.justOrEmpty(response.getBody())
-                        .flatMapMany(Flux::fromIterable)
-                        .switchIfEmpty(Flux.empty()))
+
+        return GitLabApiPagingUtils.paginateAll(page ->
+                        gitLabWebClient.get()
+                                .uri(uriBuilder -> uriBuilder
+                                        .path("/" + apiPath)
+                                        .queryParam(GitLabApiConstants.PARAM_PATH, path)
+                                        .queryParam(GitLabApiConstants.PARAM_REF, gitLabProperties.getBranch())
+                                        .queryParam(GitLabApiConstants.PARAM_PER_PAGE, GitLabApiConstants.DEFAULT_PER_PAGE)
+                                        .queryParam(GitLabApiConstants.PARAM_PAGE, page)
+                                        .build(projectId))
+                                .retrieve()
+                                .onStatus(HttpStatusCode::isError, response ->
+                                        response.bodyToMono(String.class)
+                                                .flatMap(body -> Mono.error(new RuntimeException("GitLab API error: " + body)))
+                                )
+                                .toEntityList(new ParameterizedTypeReference<List<GitLabFileDto>>() {})
+                )
+                .flatMap(Flux::fromIterable) // flatten List<GitLabFileDto> → GitLabFileDto
                 .doOnComplete(() -> log.debug("Successfully fetched repository files for projectId: {}, path: {}", projectId, path))
                 .doOnError(error -> log.error("Error fetching repository files for projectId: {}, path: {}", projectId, path, error));
     }
 
     /**
      * GitLab API를 호출하여 파일 내용을 가져옵니다.
-     *
-     * @param projectId 프로젝트 ID
-     * @param filePath 파일 경로
-     * @return 파일 내용
      */
     public Mono<String> getFileContent(String projectId, String filePath) {
         log.debug("Fetching file content for projectId: {}, filePath: {}", projectId, filePath);
@@ -163,55 +145,5 @@ public class GitLabApiClient {
                 .bodyToMono(String.class)
                 .doOnSuccess(response -> log.debug("Successfully fetched file content for projectId: {}, filePath: {}", projectId, filePath))
                 .doOnError(error -> log.error("Error fetching file content for projectId: {}, filePath: {}", projectId, filePath, error));
-    }
-
-    /**
-     * GitLab Open URL을 통해 파일 내용을 가져옵니다.
-     *
-     * @param projectId 프로젝트 ID
-     * @param filePath 파일 경로
-     * @return 파일 내용
-     */
-    public Mono<String> getFileContentViaOpenUrl(String projectId, String filePath) {
-        String url = constructOpenUrl(projectId, filePath);
-        log.debug("Fetching file content via open URL: {}", url);
-
-        return WebClient.create()
-                .get()
-                .uri(url)
-                .retrieve()
-                .bodyToMono(String.class)
-                .doOnSuccess(response -> log.debug("Successfully fetched file content via open URL: {}", url))
-                .doOnError(error -> log.error("Error fetching file content via open URL: {}", url, error));
-    }
-
-    /**
-     * GitLab 저장소의 파일에 대한 open URL을 구성합니다.
-     *
-     * @param projectId GitLab 프로젝트 ID 또는 경로
-     * @param filePath 저장소의 파일 경로
-     * @return 파일의 open URL
-     */
-    private String constructOpenUrl(String projectId, String filePath) {
-        String baseUrl = gitLabProperties.getApiUrl();
-        if (baseUrl.endsWith("/")) {
-            baseUrl = baseUrl.substring(0, baseUrl.length() - 1);
-        }
-
-        String branch = gitLabProperties.getBranch();
-        return String.format("%s/%s/-/raw/%s/%s", baseUrl, projectId, branch, filePath);
-    }
-
-    // 재사용 가능한 페이징 유틸리티
-    private <T> Flux<ResponseEntity<List<T>>> paginate(Function<Integer, Mono<ResponseEntity<List<T>>>> pageRequest) {
-        return Mono.just(1)
-                .expand(page -> pageRequest.apply(page)
-                        .map(response -> {
-                            String nextPage = response.getHeaders().getFirst("X-Next-Page");
-                            return nextPage != null && !nextPage.isEmpty() ? 
-                                   Integer.parseInt(nextPage) : null;
-                        })
-                        .filter(nextPage -> nextPage != null))
-                .flatMap(pageRequest);
     }
 }

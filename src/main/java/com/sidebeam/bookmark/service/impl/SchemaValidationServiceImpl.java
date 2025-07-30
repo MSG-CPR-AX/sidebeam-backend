@@ -3,8 +3,12 @@ package com.sidebeam.bookmark.service.impl;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+import com.sidebeam.bookmark.config.property.SchemaProperties;
 import com.sidebeam.bookmark.service.SchemaValidationService;
+import com.sidebeam.external.gitlab.dto.AllFilesContentDto;
+import com.sidebeam.external.gitlab.dto.FileContentDto;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.everit.json.schema.Schema;
 import org.everit.json.schema.ValidationException;
 import org.everit.json.schema.loader.SchemaLoader;
@@ -28,17 +32,25 @@ public class SchemaValidationServiceImpl implements SchemaValidationService {
 
     private final ObjectMapper yamlMapper;
     private final ObjectMapper jsonMapper;
+    private final SchemaProperties schemaProperties;
 
-    public SchemaValidationServiceImpl() {
+    public SchemaValidationServiceImpl(SchemaProperties schemaProperties) {
+        this.schemaProperties = schemaProperties;
         this.yamlMapper = new ObjectMapper(new YAMLFactory());
         this.jsonMapper = new ObjectMapper();
     }
 
     @Override
     public void validateYamlContent(String yamlContent, String sourcePath) {
+        // 스키마 검증이 비활성화된 경우 바로 리턴
+        if (!schemaProperties.isValidationEnabled()) {
+            log.info("Schema validation is disabled, skipping validation for {}", sourcePath);
+            return;
+        }
+
         try {
-            // Load the schema
-            String schemaContent = loadBookmarkSchema();
+            // 프로퍼티에서 스키마 경로를 가져와서 로드
+            String schemaContent = this.loadBookmarkSchema();
             JSONObject jsonSchema = new JSONObject(new JSONTokener(schemaContent));
             Schema schema = SchemaLoader.load(jsonSchema);
 
@@ -52,54 +64,77 @@ public class SchemaValidationServiceImpl implements SchemaValidationService {
                 schema.validate(jsonArray);
                 log.info("Schema validation passed for {}", sourcePath);
             } catch (ValidationException e) {
-                StringBuilder errorMessage = new StringBuilder();
-                errorMessage.append("Schema validation failed for ").append(sourcePath).append(":\n");
-
-                // Include the main exception message
-                if (e.getMessage() != null && !e.getMessage().isEmpty()) {
-                    errorMessage.append("- ").append(e.getMessage()).append("\n");
+                // 엄격한 검증 모드인 경우에만 예외 발생
+                if (!schemaProperties.isStrictValidation()) {
+                    log.warn("Schema validation failed but continuing due to non-strict validation mode");
+                    return;
                 }
 
-                // Include causing exceptions
-                e.getCausingExceptions().stream()
-                        .map(ValidationException::getMessage)
-                        .forEach(msg -> errorMessage.append("- ").append(msg).append("\n"));
+                // getAllMessages()를 활용한 간소화된 에러 메시지 생성
+                String errorMessage = StringUtils.join( "Schema validation failed for ", sourcePath, ":\n",
+                        String.join("\n", e.getAllMessages()));
 
-                log.error(errorMessage.toString());
-                throw new IllegalArgumentException(errorMessage.toString(), e);
+                log.error(errorMessage);
+                throw new IllegalArgumentException(errorMessage, e);
             }
         } catch (IOException e) {
             log.error("Error loading schema or parsing YAML: {}", e.getMessage(), e);
-            throw new IllegalArgumentException("Error loading schema or parsing YAML", e);
+
+            // 엄격한 검증 모드인 경우에만 예외 발생
+            if (schemaProperties.isStrictValidation()) {
+                throw new IllegalArgumentException("Error loading schema or parsing YAML", e);
+            } else {
+                log.warn("Schema loading failed but continuing due to non-strict validation mode");
+            }
         }
     }
 
     @Override
-    public void validateAllYamlFiles(Map<String, String> yamlFiles) {
+    public void validateAllYamlFiles(AllFilesContentDto allFilesContent) {
+        // 스키마 검증이 비활성화된 경우 바로 리턴
+        if (!schemaProperties.isValidationEnabled()) {
+            log.debug("Schema validation is disabled, skipping validation for all files");
+            return;
+        }
+
         boolean hasErrors = false;
         StringBuilder errorMessages = new StringBuilder();
 
-        for (Map.Entry<String, String> entry : yamlFiles.entrySet()) {
-            String filePath = entry.getKey();
-            String content = entry.getValue();
+        for (FileContentDto fileContent : allFilesContent.getFileContents()) {
+            String filePath = fileContent.getFilePath();
+            String content = fileContent.getContent();
 
             try {
-                validateYamlContent(content, filePath);
+                this.validateYamlContent(content, filePath);
             } catch (IllegalArgumentException e) {
                 hasErrors = true;
                 errorMessages.append(e.getMessage()).append("\n");
             }
         }
 
-        if (hasErrors) {
+        if (hasErrors && schemaProperties.isStrictValidation()) {
             throw new IllegalArgumentException("Schema validation failed for one or more files:\n" + errorMessages);
+        } else if (hasErrors) {
+            log.warn("Schema validation failed for some files but continuing due to non-strict validation mode");
         }
     }
 
     @Override
     public String loadBookmarkSchema() throws IOException {
-        try (InputStream inputStream = new ClassPathResource("bookmark-schema/bookmark.schema.json").getInputStream()) {
-            return new String(inputStream.readAllBytes(), StandardCharsets.UTF_8);
+
+        String schemaPath = schemaProperties.getBookmarkSchemaPath();
+        log.debug("Loading bookmark schema from path: {}", schemaPath);
+
+        try (InputStream inputStream = new ClassPathResource(schemaPath).getInputStream()) {
+
+            String schema = new String(inputStream.readAllBytes(), StandardCharsets.UTF_8);
+            log.info("Successfully loaded bookmark schema from: {}", schemaPath);
+
+            return schema;
+
+        } catch (IOException e) {
+            log.error("Failed to load bookmark schema from path: {}", schemaPath, e);
+            throw new IOException("Failed to load bookmark schema from: " + schemaPath, e);
         }
     }
 }
