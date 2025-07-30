@@ -9,6 +9,7 @@ import com.sidebeam.common.cache.config.CacheConfig;
 import com.sidebeam.bookmark.domain.model.Bookmark;
 import com.sidebeam.bookmark.domain.model.CategoryNode;
 import com.sidebeam.bookmark.domain.model.PackageNode;
+import com.sidebeam.bookmark.domain.service.BookMarkValidator;
 import com.sidebeam.bookmark.service.BookmarkService;
 import com.sidebeam.bookmark.service.GitLabService;
 import com.sidebeam.external.gitlab.dto.AllFilesContentDto;
@@ -38,6 +39,7 @@ public class BookmarkServiceImpl implements BookmarkService {
 
     private final GitLabService gitLabService;
     private final SchemaValidationService schemaValidationService;
+    private final BookMarkValidator bookMarkValidator;
     private final ObjectMapper yamlMapper;
 
     /**
@@ -54,9 +56,10 @@ public class BookmarkServiceImpl implements BookmarkService {
     @Autowired @Lazy
     private BookmarkService self;
 
-    public BookmarkServiceImpl(GitLabService gitLabService, SchemaValidationService schemaValidationService) {
+    public BookmarkServiceImpl(GitLabService gitLabService, SchemaValidationService schemaValidationService, BookMarkValidator bookMarkValidator) {
         this.gitLabService = gitLabService;
         this.schemaValidationService = schemaValidationService;
+        this.bookMarkValidator = bookMarkValidator;
         this.yamlMapper = new ObjectMapper(new YAMLFactory());
     }
 
@@ -86,9 +89,9 @@ public class BookmarkServiceImpl implements BookmarkService {
 
         List<Bookmark> bookmarks = new ArrayList<>();
 
-        for (FileContentDto fileContent : allFilesContent.getFileContents()) {
-            String filePath = fileContent.getFilePath();
-            String content = fileContent.getContent();
+        for (FileContentDto fileContent : allFilesContent.fileContents()) {
+            String filePath = fileContent.filePath();
+            String content = fileContent.content();
             try {
                 bookmarks.addAll(this.parseYamlContent(content));
             } catch (Exception e) {
@@ -97,9 +100,9 @@ public class BookmarkServiceImpl implements BookmarkService {
         }
 
         // Check for duplicate URLs
-        this.checkDuplicateUrls(bookmarks);
+        bookMarkValidator.checkDuplicateUrls(bookmarks);
 
-        log.info("Fetched {} bookmarks from {} files", bookmarks.size(), allFilesContent.getFileContents().size());
+        log.info("Fetched {} bookmarks from {} files", bookmarks.size(), allFilesContent.fileContents().size());
         return BookmarkMapper.INSTANCE.toDto(bookmarks);
     }
 
@@ -152,41 +155,5 @@ public class BookmarkServiceImpl implements BookmarkService {
         return yamlMapper.readValue(content, yamlMapper.getTypeFactory().constructCollectionType(List.class, Bookmark.class));
     }
 
-    /**
-     * Check for duplicate URLs across all bookmarks and log an error if any are found.
-     * This is a validation step to ensure data integrity.
-     */
-    private void checkDuplicateUrls(List<Bookmark> bookmarks) {
-        Map<String, List<Bookmark>> urlMap = new HashMap<>();
-
-        // Group bookmarks by URL
-        for (Bookmark bookmark : bookmarks) {
-            String url = bookmark.getUrl();
-            if (!urlMap.containsKey(url)) {
-                urlMap.put(url, new ArrayList<>());
-            }
-            urlMap.get(url).add(bookmark);
-        }
-
-        // Check for duplicates
-        boolean hasDuplicates = false;
-        StringBuilder errorMessage = new StringBuilder("Duplicate URLs found:\n");
-
-        for (Map.Entry<String, List<Bookmark>> entry : urlMap.entrySet()) {
-            if (entry.getValue().size() > 1) {
-                hasDuplicates = true;
-                errorMessage.append("URL: ").append(entry.getKey()).append("\n");
-                for (Bookmark bookmark : entry.getValue()) {
-                    errorMessage.append("  - ").append(bookmark.getName())
-                            .append(" (").append(bookmark.getSourcePath()).append(")\n");
-                }
-            }
-        }
-
-        if (hasDuplicates) {
-            log.error(errorMessage.toString());
-            throw new IllegalStateException("Duplicate URLs found in bookmarks. See logs for details.");
-        }
-    }
 
 }

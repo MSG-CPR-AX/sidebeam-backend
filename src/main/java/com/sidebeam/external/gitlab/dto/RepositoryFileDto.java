@@ -1,7 +1,6 @@
 package com.sidebeam.external.gitlab.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import lombok.Data;
 
 /**
  * GitLab Repository Tree API 응답을 나타내는 DTO 클래스
@@ -10,39 +9,38 @@ import lombok.Data;
  *
  * @see <a href="https://docs.gitlab.com/ee/api/repositories.html#list-repository-tree">GitLab Repository Tree API</a>
  */
-@Data
-public class RepositoryFileDto {
-
+public record RepositoryFileDto(
     /**
      * 파일 또는 디렉토리 ID
      */
-    private String id;
+    String id,
 
     /**
      * 파일 또는 디렉토리 이름
      */
-    private String name;
+    String name,
 
     /**
      * 파일 타입 (blob: 파일, tree: 디렉토리)
      */
-    private String type;
+    String type,
 
     /**
      * 파일 또는 디렉토리 경로
      */
-    private String path;
+    String path,
 
     /**
      * 파일 모드 (권한)
      */
-    private String mode;
+    String mode,
 
     /**
      * 웹 URL
      */
     @JsonProperty("web_url")
-    private String webUrl;
+    String webUrl
+) {
 
     /**
      * 파일인지 확인하는 편의 메서드

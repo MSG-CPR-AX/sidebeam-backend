@@ -2,6 +2,7 @@ package com.sidebeam.bookmark.service;
 
 import com.sidebeam.bookmark.dto.BookmarkDto;
 import com.sidebeam.bookmark.dto.CategoryNodeDto;
+import com.sidebeam.bookmark.domain.service.BookMarkValidator;
 import com.sidebeam.bookmark.service.impl.BookmarkServiceImpl;
 import com.sidebeam.external.gitlab.dto.AllFilesContentDto;
 import com.sidebeam.external.gitlab.dto.FileContentDto;
@@ -16,6 +17,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
+import static org.mockito.ArgumentMatchers.any;
 
 @Slf4j
 @ExtendWith(MockitoExtension.class)
@@ -26,6 +28,9 @@ class BookmarkServiceTest {
 
     @Mock
     private SchemaValidationService schemaValidationService;
+
+    @Mock
+    private BookMarkValidator bookMarkValidator;
 
     private BookmarkService bookmarkService;
 
@@ -54,7 +59,7 @@ class BookmarkServiceTest {
 
     @BeforeEach
     void setUp() {
-        BookmarkServiceImpl impl = new BookmarkServiceImpl(gitLabService, schemaValidationService);
+        BookmarkServiceImpl impl = new BookmarkServiceImpl(gitLabService, schemaValidationService, bookMarkValidator);
 
         // 단위 테스트 환경에서 self-injection 필드를 수동으로 설정
         // Spring 컨테이너가 없는 환경에서 @Autowired가 작동하지 않으므로 리플렉션을 사용
@@ -81,10 +86,10 @@ class BookmarkServiceTest {
 
         // GitLabService 호출 결과 로깅
         log.info("===== GitLabService.fetchAllYamlFiles() 호출 결과 =====");
-        log.info("YAML 파일 수: {}", allFilesContent.getFileContents().size());
-        allFilesContent.getFileContents().forEach(file -> {
-            log.info("파일 경로: {}", file.getFilePath());
-            log.info("파일 내용: \n{}", file.getContent());
+        log.info("YAML 파일 수: {}", allFilesContent.fileContents().size());
+        allFilesContent.fileContents().forEach(file -> {
+            log.info("파일 경로: {}", file.filePath());
+            log.info("파일 내용: \n{}", file.content());
         });
 
         // BookmarkService 호출 결과 로깅
@@ -209,6 +214,10 @@ class BookmarkServiceTest {
         FileContentDto fileContent = new FileContentDto("ops:test_bookmarks.yml", yamlWithDuplicateUrls);
         AllFilesContentDto allFilesContent = new AllFilesContentDto(List.of(fileContent));
         when(gitLabService.retrieveAllYamlFiles()).thenReturn(allFilesContent);
+        
+        // Configure the validator mock to throw exception when duplicate URLs are detected
+        doThrow(new IllegalStateException("Duplicate URLs found in bookmarks. See logs for details."))
+                .when(bookMarkValidator).checkDuplicateUrls(any());
 
         // Act & Assert
         Exception exception = assertThrows(IllegalStateException.class, () -> {

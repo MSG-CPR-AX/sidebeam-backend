@@ -1,9 +1,5 @@
 package com.sidebeam.external.gitlab.dto;
 
-import lombok.Data;
-import lombok.AllArgsConstructor;
-import lombok.NoArgsConstructor;
-
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -12,15 +8,12 @@ import java.util.stream.Collectors;
  * 모든 파일의 내용을 나타내는 DTO입니다.
  * Map<String, String> 대신 사용됩니다.
  */
-@Data
-@AllArgsConstructor
-@NoArgsConstructor
-public class AllFilesContentDto {
-    
+public record AllFilesContentDto(
     /**
      * 파일 내용 목록
      */
-    private List<FileContentDto> fileContents;
+    List<FileContentDto> fileContents
+) {
     
     /**
      * 편의를 위한 Map 변환 메서드
@@ -31,8 +24,8 @@ public class AllFilesContentDto {
     public Map<String, String> toMap() {
         return fileContents.stream()
                 .collect(Collectors.toMap(
-                    FileContentDto::getFilePath,
-                    FileContentDto::getContent
+                    FileContentDto::filePath,
+                    FileContentDto::content
                 ));
     }
     
