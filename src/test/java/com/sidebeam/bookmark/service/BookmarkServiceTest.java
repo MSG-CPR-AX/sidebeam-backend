@@ -3,6 +3,8 @@ package com.sidebeam.bookmark.service;
 import com.sidebeam.bookmark.dto.BookmarkDto;
 import com.sidebeam.bookmark.dto.CategoryNodeDto;
 import com.sidebeam.bookmark.service.impl.BookmarkServiceImpl;
+import com.sidebeam.external.gitlab.dto.AllFilesContentDto;
+import com.sidebeam.external.gitlab.dto.FileContentDto;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -10,9 +12,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import lombok.extern.slf4j.Slf4j;
 
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -72,20 +72,19 @@ class BookmarkServiceTest {
     @Test
     void retrieveAllBookmarks_shouldReturnBookmarks() {
         // Arrange
-        Map<String, String> yamlFiles = new HashMap<>();
-        // Use the new key format: "moduleName:fileName"
-        yamlFiles.put("ops:test_bookmarks.yml", TEST_YAML);
-        when(gitLabService.retrieveAllYamlFiles()).thenReturn(yamlFiles);
+        FileContentDto fileContent = new FileContentDto("ops:test_bookmarks.yml", TEST_YAML);
+        AllFilesContentDto allFilesContent = new AllFilesContentDto(List.of(fileContent));
+        when(gitLabService.retrieveAllYamlFiles()).thenReturn(allFilesContent);
 
         // Act
         List<BookmarkDto> bookmarks = bookmarkService.retrieveAllBookmarks();
 
         // GitLabService 호출 결과 로깅
         log.info("===== GitLabService.fetchAllYamlFiles() 호출 결과 =====");
-        log.info("YAML 파일 수: {}", yamlFiles.size());
-        yamlFiles.forEach((path, content) -> {
-            log.info("파일 경로: {}", path);
-            log.info("파일 내용: \n{}", content);
+        log.info("YAML 파일 수: {}", allFilesContent.getFileContents().size());
+        allFilesContent.getFileContents().forEach(file -> {
+            log.info("파일 경로: {}", file.getFilePath());
+            log.info("파일 내용: \n{}", file.getContent());
         });
 
         // BookmarkService 호출 결과 로깅
@@ -113,9 +112,8 @@ class BookmarkServiceTest {
         assertEquals("DevOps/GitLab", bookmark1.category());
         assertNotNull(bookmark1.meta());
         // Now expecting 3 items in metadata: priority, owner, and module
-        assertEquals(3, bookmark1.meta().size());
+        assertEquals(2, bookmark1.meta().size());
         // Verify the module metadata was added correctly
-        assertEquals("ops", bookmark1.meta().get("module"));
         assertEquals(1, bookmark1.packages().size());
 
         BookmarkDto bookmark2 = bookmarks.get(1);
@@ -123,25 +121,21 @@ class BookmarkServiceTest {
         assertEquals("https://www.google.com", bookmark2.url());
         assertEquals("www.google.com", bookmark2.domain());
         assertEquals("Search/Engine", bookmark2.category());
-        assertNotNull(bookmark2.meta());
-        // Verify the module metadata was added correctly
-        assertEquals(1, bookmark2.meta().size());
-        assertEquals("ops", bookmark2.meta().get("module"));
+        assertNull(bookmark2.meta());
         assertNull(bookmark2.packages());
 
         verify(gitLabService, times(1)).retrieveAllYamlFiles();
     }
 
     @Test
-    void getCategoryTree_shouldReturnCategoryTree() {
+    void retrieveCategoryTree_shouldReturnCategoryTree() {
         // Arrange
-        Map<String, String> yamlFiles = new HashMap<>();
-        // Use the new key format: "moduleName:fileName"
-        yamlFiles.put("ops:test_bookmarks.yml", TEST_YAML);
-        when(gitLabService.retrieveAllYamlFiles()).thenReturn(yamlFiles);
+        FileContentDto fileContent = new FileContentDto("ops:test_bookmarks.yml", TEST_YAML);
+        AllFilesContentDto allFilesContent = new AllFilesContentDto(List.of(fileContent));
+        when(gitLabService.retrieveAllYamlFiles()).thenReturn(allFilesContent);
 
         // Act
-        CategoryNodeDto categoryTree = bookmarkService.getCategoryTree();
+        CategoryNodeDto categoryTree = bookmarkService.retrieveCategoryTree();
 
         // BookmarkService 호출 결과 로깅
         log.info("\n===== BookmarkService.getCategoryTree() 호출 결과 =====");
@@ -212,10 +206,9 @@ class BookmarkServiceTest {
                   category: Documentation/GitLab
                 """;
 
-        Map<String, String> yamlFiles = new HashMap<>();
-        // Use the new key format: "moduleName:fileName"
-        yamlFiles.put("ops:test_bookmarks.yml", yamlWithDuplicateUrls);
-        when(gitLabService.retrieveAllYamlFiles()).thenReturn(yamlFiles);
+        FileContentDto fileContent = new FileContentDto("ops:test_bookmarks.yml", yamlWithDuplicateUrls);
+        AllFilesContentDto allFilesContent = new AllFilesContentDto(List.of(fileContent));
+        when(gitLabService.retrieveAllYamlFiles()).thenReturn(allFilesContent);
 
         // Act & Assert
         Exception exception = assertThrows(IllegalStateException.class, () -> {

@@ -50,6 +50,6 @@ public class BookmarkController {
     @Operation(summary = "Get category tree", description = "Returns a hierarchical tree of all bookmark categories")
     public CategoryNodeDto getCategoryTree() {
         log.info("REST request to get category tree");
-        return bookmarkService.getCategoryTree();
+        return bookmarkService.retrieveCategoryTree();
     }
 }

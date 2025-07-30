@@ -1,15 +1,15 @@
 package com.sidebeam.bookmark.service;
 
+import com.sidebeam.external.gitlab.dto.AllFilesContentDto;
 import java.util.List;
-import java.util.Map;
 
 public interface GitLabService {
 
     /**
      * GitLab 저장소에서 YAML 파일 목록을 가져옵니다.
-     * 이 메서드는 GitLab API를 통해 YAML 파일의 경로와 내용을 매핑하는 맵을 반환합니다.
+     * 이 메서드는 GitLab API를 통해 YAML 파일의 경로와 내용을 포함하는 DTO를 반환합니다.
      */
-    Map<String, String> retrieveAllYamlFiles();
+    AllFilesContentDto retrieveAllYamlFiles();
 
     /**
      * 지정된 파일 경로에 해당하는 YAML 파일의 내용을 가져옵니다.

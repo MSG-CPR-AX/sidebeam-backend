@@ -1,9 +1,9 @@
 package com.sidebeam.external.gitlab.config;
 
 import com.sidebeam.common.core.util.PropertyUtil;
-import com.sidebeam.external.gitlab.property.GitLabApiProperties;
-import com.sidebeam.external.gitlab.property.GitLabProperties;
-import com.sidebeam.external.gitlab.property.WebhookProperties;
+import com.sidebeam.external.gitlab.config.property.GitLabApiProperties;
+import com.sidebeam.external.gitlab.config.property.GitLabProperties;
+import com.sidebeam.external.gitlab.config.property.WebhookProperties;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.BeforeEach;
 import static org.junit.jupiter.api.Assertions.*;

@@ -48,6 +48,15 @@ cache:
   # Cache time-to-live in seconds (default: 1 hour)
   ttl: 3600
 
+# Schema Configuration
+schema:
+  # JSON 스키마 파일 경로 (클래스패스 기준)
+  bookmark-schema-path: bookmark-schema/bookmark.schema.json
+  # 스키마 검증 활성화 여부
+  validation-enabled: true
+  # 엄격한 검증 모드 (true: 검증 실패 시 예외 발생, false: 로그만 출력)
+  strict-validation: false
+
 # Webhook Configuration
 webhook:
   # Secret token for GitLab webhook validation
