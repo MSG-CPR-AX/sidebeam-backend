@@ -53,6 +53,14 @@ dependencies {
     // Lombok for tests
     testCompileOnly("org.projectlombok:lombok")
     testAnnotationProcessor("org.projectlombok:lombok")
+
+
+    // macOS ARM64 전용 DNS 리졸버 (로컬 개발환경용)
+    if (System.getProperty("os.name").lowercase().startsWith("mac") &&
+        System.getProperty("os.arch") == "aarch64" &&
+        !System.getenv("CI").toBoolean()) { // CI 환경이 아닌 경우에만
+        runtimeOnly("io.netty:netty-resolver-dns-native-macos:4.1.76.Final:osx-aarch_64")
+    }
 }
 
 tasks.test {
