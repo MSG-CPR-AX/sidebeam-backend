@@ -1,6 +1,7 @@
 package com.sidebeam.external.gitlab.util;
 
 import com.sidebeam.common.core.exception.TechnicalException;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.http.ResponseEntity;
@@ -12,15 +13,13 @@ import java.util.Objects;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 
+@Slf4j
 public class GitLabApiPagingUtils {
 
     private static String X_NEXT_PAGE_HEADER = "X-Next-Page";
 
     /**
      * GitLab 스타일의 페이지 기반 API 순회를 통해 전체 데이터를 Flux<T>로 평탄화해서 반환합니다.
-     *
-     * @param pageFetcher page 번호를 받아 Mono<ResponseEntity<List<T>>>를 반환하는 함수
-     * @return 전체 페이지의 데이터를 1건씩 푼 Flux<T>
      */
     public static <T> Flux<T> paginateAll(Function<Integer, Mono<ResponseEntity<List<T>>>> pageFetcher) {
 
@@ -49,12 +48,14 @@ public class GitLabApiPagingUtils {
                 .flatMap(pageFetcher)
                 .flatMap(response -> {
                     String nextPage = response.getHeaders().getFirst(X_NEXT_PAGE_HEADER);
-                    // 예외 처리: body가 null이거나 빈 리스트인데 X-Next-Page가 존재하는 경우
-                    if (StringUtils.isEmpty(nextPage)) return Mono.empty();
+
+                    // 예외 처리: body가 빈 리스트인데 X-Next-Page가 존재하는 경우
+                    if (StringUtils.isEmpty(nextPage) && CollectionUtils.isEmpty(response.getBody())) return Mono.empty();
 
                     List<T> body = response.getBody();
                     // 예외 처리: body가 null이거나 빈 리스트인데 X-Next-Page가 존재하는 경우
-                    if (CollectionUtils.isEmpty(body)) return Mono.error(new TechnicalException(
+                    if (StringUtils.isNotEmpty(nextPage) && CollectionUtils.isEmpty(body))
+                        return Mono.error(new TechnicalException(
                             "Response body is null but X-Next-Page header exists: " + nextPage));
                     
                     return Mono.justOrEmpty(body).flatMapMany(Flux::fromIterable);

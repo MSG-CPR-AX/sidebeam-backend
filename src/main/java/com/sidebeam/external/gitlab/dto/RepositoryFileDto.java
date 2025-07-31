@@ -44,8 +44,6 @@ public record RepositoryFileDto(
 
     /**
      * 파일인지 확인하는 편의 메서드
-     *
-     * @return 파일이면 true, 디렉토리면 false
      */
     public boolean isFile() {
         return "blob".equals(type);
@@ -53,8 +51,6 @@ public record RepositoryFileDto(
 
     /**
      * 디렉토리인지 확인하는 편의 메서드
-     *
-     * @return 디렉토리면 true, 파일이면 false
      */
     public boolean isDirectory() {
         return "tree".equals(type);
@@ -62,9 +58,6 @@ public record RepositoryFileDto(
 
     /**
      * 특정 확장자를 가진 파일인지 확인하는 편의 메서드
-     *
-     * @param extension 확인할 파일 확장자 (예: ".yml", ".yaml")
-     * @return 해당 확장자를 가진 파일이면 true
      */
     public boolean hasExtension(String extension) {
         return isFile() && name != null && name.endsWith(extension);

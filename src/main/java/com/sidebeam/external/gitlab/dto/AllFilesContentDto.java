@@ -18,8 +18,6 @@ public record AllFilesContentDto(
     /**
      * 편의를 위한 Map 변환 메서드
      * 기존 코드와의 호환성을 위해 제공됩니다.
-     * 
-     * @return 파일 경로를 키로, 파일 내용을 값으로 하는 Map
      */
     public Map<String, String> toMap() {
         return fileContents.stream()
@@ -31,9 +29,6 @@ public record AllFilesContentDto(
     
     /**
      * Map에서 AllFilesContentDto로 변환하는 정적 팩토리 메서드
-     * 
-     * @param fileMap 파일 경로를 키로, 파일 내용을 값으로 하는 Map
-     * @return AllFilesContentDto 인스턴스
      */
     public static AllFilesContentDto fromMap(Map<String, String> fileMap) {
         List<FileContentDto> fileContents = fileMap.entrySet().stream()

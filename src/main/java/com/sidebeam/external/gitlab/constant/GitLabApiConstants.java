@@ -11,7 +11,7 @@ public class GitLabApiConstants {
     public static final String PARAM_PER_PAGE = "per_page";
     public static final String PARAM_PAGE = "page";
     public static final String PARAM_REF = "ref";
-    public static final String PARAM_PATH = "path";
+    public static final String PARAM_PATH = "file_path";
     public static final String PARAM_INCLUDE_SUBGROUPS = "include_subgroups";
 
     // Default Values

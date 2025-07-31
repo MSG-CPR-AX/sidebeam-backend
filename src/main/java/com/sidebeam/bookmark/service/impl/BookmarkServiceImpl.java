@@ -8,15 +8,13 @@ import com.sidebeam.bookmark.mapper.BookmarkMapper;
 import com.sidebeam.common.cache.config.CacheConfig;
 import com.sidebeam.bookmark.domain.model.Bookmark;
 import com.sidebeam.bookmark.domain.model.CategoryNode;
-import com.sidebeam.bookmark.domain.model.PackageNode;
-import com.sidebeam.bookmark.domain.service.BookMarkValidator;
+import com.sidebeam.bookmark.domain.service.BookmarkValidator;
 import com.sidebeam.bookmark.service.BookmarkService;
 import com.sidebeam.bookmark.service.GitLabService;
 import com.sidebeam.external.gitlab.dto.AllFilesContentDto;
 import com.sidebeam.external.gitlab.dto.FileContentDto;
 import com.sidebeam.bookmark.service.SchemaValidationService;
 import com.sidebeam.bookmark.util.CategoryTreeBuilder;
-import com.sidebeam.bookmark.util.PackageTreeBuilder;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.CacheEvict;
@@ -26,9 +24,7 @@ import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 /**
  * Implementation of BookmarkService.
@@ -39,7 +35,7 @@ public class BookmarkServiceImpl implements BookmarkService {
 
     private final GitLabService gitLabService;
     private final SchemaValidationService schemaValidationService;
-    private final BookMarkValidator bookMarkValidator;
+    private final BookmarkValidator bookMarkValidator;
     private final ObjectMapper yamlMapper;
 
     /**
@@ -56,7 +52,7 @@ public class BookmarkServiceImpl implements BookmarkService {
     @Autowired @Lazy
     private BookmarkService self;
 
-    public BookmarkServiceImpl(GitLabService gitLabService, SchemaValidationService schemaValidationService, BookMarkValidator bookMarkValidator) {
+    public BookmarkServiceImpl(GitLabService gitLabService, SchemaValidationService schemaValidationService, BookmarkValidator bookMarkValidator) {
         this.gitLabService = gitLabService;
         this.schemaValidationService = schemaValidationService;
         this.bookMarkValidator = bookMarkValidator;
@@ -73,16 +69,17 @@ public class BookmarkServiceImpl implements BookmarkService {
     @Override
     @Cacheable(CacheConfig.BOOKMARKS_CACHE)
     public List<BookmarkDto> retrieveAllBookmarks() {
-        log.info("Fetching all bookmarks from GitLab");
+        log.debug("Fetching all bookmarks from GitLab");
 
         // 모든 데이터 파일 조회
         AllFilesContentDto allFilesContent = gitLabService.retrieveAllYamlFiles();
 
-        // Validate all YAML files against the schema
+        // 정의된 스키마 기반 조회된 모든 YAML의 유효성 검증
         try {
             schemaValidationService.validateAllYamlFiles(allFilesContent);
-            log.info("All YAML files passed schema validation");
+            log.debug("All YAML files passed schema validation");
         } catch (IllegalArgumentException e) {
+            // TODO : 오류 처리 고도화 필요
             log.warn("Schema validation failed: {}", e.getMessage());
             return new ArrayList<>();
         }
@@ -99,10 +96,10 @@ public class BookmarkServiceImpl implements BookmarkService {
             }
         }
 
-        // Check for duplicate URLs
+        // 중복 URL 존재 유무 검증
         bookMarkValidator.checkDuplicateUrls(bookmarks);
 
-        log.info("Fetched {} bookmarks from {} files", bookmarks.size(), allFilesContent.fileContents().size());
+        log.debug("Fetched {} bookmarks from {} files", bookmarks.size(), allFilesContent.fileContents().size());
         return BookmarkMapper.INSTANCE.toDto(bookmarks);
     }
 
@@ -116,7 +113,7 @@ public class BookmarkServiceImpl implements BookmarkService {
     @Override
     @Cacheable(CacheConfig.CATEGORY_TREE_CACHE)
     public CategoryNodeDto retrieveCategoryTree() {
-        log.info("Building category tree");
+        log.debug("Building category tree");
         // self 프록시를 통해 @Cacheable 어노테이션이 적용된 메서드를 호출하여
         // Spring AOP 프록시 메커니즘이 정상적으로 작동하도록 보장합니다.
         List<BookmarkDto> bookmarks = self.retrieveAllBookmarks();
@@ -125,7 +122,7 @@ public class BookmarkServiceImpl implements BookmarkService {
                 .toList();
 
         CategoryNode root = CategoryTreeBuilder.buildTree(categories);
-        log.info("Built category tree with {} categories", categories.size());
+        log.debug("Built category tree with {} categories", categories.size());
         return BookmarkMapper.INSTANCE.toDto(root);
     }
 
@@ -140,7 +137,7 @@ public class BookmarkServiceImpl implements BookmarkService {
     @Override
     @CacheEvict(value = {CacheConfig.BOOKMARKS_CACHE, CacheConfig.CATEGORY_TREE_CACHE}, allEntries = true)
     public void refreshBookmarks() {
-        log.info("Refreshing bookmark data");
+        log.debug("Refreshing bookmark data");
         // The cache eviction will force a reload on next access
     }
 
@@ -154,6 +151,4 @@ public class BookmarkServiceImpl implements BookmarkService {
     private List<Bookmark> parseYamlContent(String content) throws IOException {
         return yamlMapper.readValue(content, yamlMapper.getTypeFactory().constructCollectionType(List.class, Bookmark.class));
     }
-
-
 }
