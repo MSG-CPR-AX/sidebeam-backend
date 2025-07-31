@@ -56,7 +56,7 @@ public class GitLabApiPagingUtils {
                     // 예외 처리: body가 null이거나 빈 리스트인데 X-Next-Page가 존재하는 경우
                     if (StringUtils.isNotEmpty(nextPage) && CollectionUtils.isEmpty(body))
                         return Mono.error(new TechnicalException(
-                            "Response body is null but X-Next-Page header exists: " + nextPage));
+                            "Response body is empty but X-Next-Page header exists: " + nextPage));
                     
                     return Mono.justOrEmpty(body).flatMapMany(Flux::fromIterable);
                 });

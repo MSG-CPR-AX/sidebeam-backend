@@ -43,14 +43,22 @@ cache:
   # 캐시 생존 시간(초) (기본값: 1시간)
   ttl: 3600
 
-# 스키마 설정
-schema:
-  # JSON 스키마 파일 경로 (클래스패스 기준)
-  bookmark-schema-path: bookmark-schema/bookmark.schema.json
-  # 스키마 검증 활성화 여부
-  validation-enabled: true
-  # 엄격한 검증 모드 (true: 검증 실패 시 예외 발생, false: 로그만 출력)
-  strict-validation: false
+# 검증 설정
+validation:
+  # 스키마 검증 설정
+  schema:
+    # JSON 스키마 파일 경로 (클래스패스 기준)
+    bookmark-schema-path: bookmark-schema/bookmark.schema.json
+    # 스키마 검증 활성화 여부
+    enabled: true
+    # 엄격한 검증 모드 (true: 검증 실패 시 예외 발생, false: 로그만 출력)
+    strict: false
+  # 중복 검증 설정
+  duplicate:
+    # 중복 URL 검증 활성화 여부
+    enabled: true
+    # 엄격한 검증 모드 (true: 검증 실패 시 예외 발생, false: 로그만 출력)
+    strict: true
 
 # 웹훅 설정
 webhook:
