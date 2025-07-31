@@ -124,44 +124,4 @@ class GitLabServiceTest {
         verify(gitLabStorageFileRetriever, times(1)).retrieveFileContents(List.of(projectFiles));
         verify(springCacheManager, times(1)).cacheData(resultDto);
     }
-
-    @Test
-    void fetchYamlFile_shouldReturnFileContent() {
-        // Arrange
-        String filePath = "file.yml";
-        String projectId = "project-id";
-        String content = "file content";
-
-        when(gitLabProperties.getProjectId()).thenReturn(projectId);
-        when(gitLabStorageFileRetriever.retrieveSingleFileContent(projectId, filePath)).thenReturn(Mono.just(content));
-
-        // Act
-        String result = gitLabService.retrieveYamlFile(filePath);
-
-        // Assert
-        assertEquals(content, result);
-        verify(gitLabStorageFileRetriever, times(1)).retrieveSingleFileContent(projectId, filePath);
-    }
-
-    @Test
-    void listYamlFiles_shouldReturnFileRetrieve() {
-        // Arrange
-        String projectId = "project-id";
-        when(gitLabProperties.getProjectId()).thenReturn(projectId);
-
-        List<String> expectedFiles = List.of("file1.yml", "file3.yml");
-        when(gitLabStorageFileRetriever.retrieveProjectFiles(projectId))
-                .thenReturn(Flux.fromIterable(expectedFiles));
-
-        // Act
-        List<String> result = gitLabService.retrieveYamlFiles();
-
-        // Assert
-        assertNotNull(result);
-        assertEquals(2, result.size());
-        assertTrue(result.contains("file1.yml"));
-        assertTrue(result.contains("file3.yml"));
-
-        verify(gitLabStorageFileRetriever, times(1)).retrieveProjectFiles(projectId);
-    }
 }

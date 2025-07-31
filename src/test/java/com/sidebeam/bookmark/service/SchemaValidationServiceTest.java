@@ -1,6 +1,6 @@
 package com.sidebeam.bookmark.service;
 
-import com.sidebeam.bookmark.config.property.SchemaProperties;
+import com.sidebeam.bookmark.config.property.ValidationProperties;
 import com.sidebeam.bookmark.service.impl.SchemaValidationServiceImpl;
 import com.sidebeam.external.gitlab.dto.AllFilesContentDto;
 import com.sidebeam.external.gitlab.dto.FileContentDto;
@@ -14,15 +14,15 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
 
 @ExtendWith(MockitoExtension.class)
-public class SchemaValidationServiceTest {
+class SchemaValidationServiceTest {
 
     private SchemaValidationService schemaValidationService;
 
     @BeforeEach
     void setUp() {
-        SchemaProperties schemaProperties = new SchemaProperties();
-        schemaProperties.setStrictValidation(true); // Enable strict validation for tests
-        schemaValidationService = new SchemaValidationServiceImpl(schemaProperties);
+        ValidationProperties validationProperties = new ValidationProperties();
+        validationProperties.getSchema().setStrict(true); // Enable strict validation for tests
+        schemaValidationService = new SchemaValidationServiceImpl(validationProperties);
     }
 
     @Test
@@ -88,7 +88,7 @@ public class SchemaValidationServiceTest {
               domain: example.com
               category: Test/Category
             """);
-        
+
         AllFilesContentDto validFilesContent = new AllFilesContentDto(List.of(validFile));
 
         // Should not throw an exception
@@ -100,7 +100,7 @@ public class SchemaValidationServiceTest {
               url: https://example.com
               category: Test/Category
             """);
-        
+
         AllFilesContentDto mixedFilesContent = new AllFilesContentDto(List.of(validFile, invalidFile));
 
         // Should throw an IllegalArgumentException

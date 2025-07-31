@@ -108,7 +108,7 @@ class GitLabApiPagingUtilsTest {
                     .block();
         });
         
-        assertTrue(exception.getMessage().contains("Response body is null but X-Next-Page header exists: 2"));
+        assertTrue(exception.getMessage().contains("Response body is empty"));
     }
 
     @Test

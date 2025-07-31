@@ -12,6 +12,7 @@ import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -23,9 +24,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 /**
  * 예외 처리 시스템의 통합 테스트
  */
+@ActiveProfiles("test")
 @WebMvcTest(controllers = TestExceptionController.class)
 @Import(ExceptionHandlingTest.TestConfig.class)
-public class ExceptionHandlingTest {
+class ExceptionHandlingTest {
 
     @Autowired
     private MockMvc mockMvc;
@@ -38,7 +40,7 @@ public class ExceptionHandlingTest {
      * ApplicationException 처리 테스트
      */
     @Test
-    public void testBusinessExceptionHandling() throws Exception {
+    void testBusinessExceptionHandling() throws Exception {
         mockMvc.perform(get("/test/business-exception"))
                 .andExpect(status().isNotFound())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
@@ -53,7 +55,7 @@ public class ExceptionHandlingTest {
      * SystemException 처리 테스트
      */
     @Test
-    public void testSystemExceptionHandling() throws Exception {
+    void testSystemExceptionHandling() throws Exception {
         mockMvc.perform(get("/test/system-exception"))
                 .andExpect(status().isServiceUnavailable())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
@@ -68,7 +70,7 @@ public class ExceptionHandlingTest {
      * IllegalArgumentException 처리 테스트
      */
     @Test
-    public void testIllegalArgumentExceptionHandling() throws Exception {
+    void testIllegalArgumentExceptionHandling() throws Exception {
         mockMvc.perform(get("/test/illegal-argument"))
                 .andExpect(status().isBadRequest())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
@@ -83,7 +85,7 @@ public class ExceptionHandlingTest {
      * 일반 Exception 처리 테스트
      */
     @Test
-    public void testGenericExceptionHandling() throws Exception {
+    void testGenericExceptionHandling() throws Exception {
         mockMvc.perform(get("/test/generic-exception"))
                 .andExpect(status().isInternalServerError())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
@@ -98,7 +100,7 @@ public class ExceptionHandlingTest {
      * 파라미터 누락 테스트
      */
     @Test
-    public void testMissingParameterHandling() throws Exception {
+    void testMissingParameterHandling() throws Exception {
         mockMvc.perform(get("/test/missing-param"))
                 .andExpect(status().isBadRequest())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
