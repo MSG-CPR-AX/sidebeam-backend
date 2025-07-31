@@ -7,6 +7,8 @@ spring:
     name: sidebar-backend
   cache:
     type: simple
+  main:
+    web-application-type: servlet
 
 logging:
   level:
@@ -36,6 +38,14 @@ gitlab:
   api:
     config: classpath:/gitlab/gitlab-api.yml
 
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    disable-swagger-default-url: true
+    url: /api-docs        # ✅ 이 설정만 유지
+
 # 캐시 설정
 cache:
   # 북마크 데이터 캐싱 활성화
@@ -58,7 +68,7 @@ validation:
     # 중복 URL 검증 활성화 여부
     enabled: true
     # 엄격한 검증 모드 (true: 검증 실패 시 예외 발생, false: 로그만 출력)
-    strict: true
+    strict: false
 
 # 웹훅 설정
 webhook:
