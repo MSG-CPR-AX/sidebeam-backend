@@ -7,7 +7,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -18,8 +20,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 /**
  * 새로운 예외 계층 구조의 통합 테스트
  */
-@WebMvcTest(controllers = {ExceptionHierarchyTest.TestController.class, GlobalExceptionHandler.class})
-public class ExceptionHierarchyTest {
+@ActiveProfiles("test")
+@WebMvcTest(controllers = ExceptionHierarchyTestController.class)
+@Import(ExceptionHierarchyTest.TestConfig.class)
+class ExceptionHierarchyTest {
 
     @Autowired
     private MockMvc mockMvc;
@@ -31,7 +35,7 @@ public class ExceptionHierarchyTest {
      * TechnicalException 처리 테스트
      */
     @Test
-    public void testTechnicalExceptionHandling() throws Exception {
+    void testTechnicalExceptionHandling() throws Exception {
         mockMvc.perform(get("/test/technical-exception"))
                 .andExpect(status().isInternalServerError())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
@@ -46,7 +50,7 @@ public class ExceptionHierarchyTest {
      * BusinessException 처리 테스트
      */
     @Test
-    public void testDomainExceptionHandling() throws Exception {
+    void testDomainExceptionHandling() throws Exception {
         mockMvc.perform(get("/test/domain-exception"))
                 .andExpect(status().isNotFound())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
@@ -61,7 +65,7 @@ public class ExceptionHierarchyTest {
      * ValidationException 처리 테스트
      */
     @Test
-    public void testValidationExceptionHandling() throws Exception {
+    void testValidationExceptionHandling() throws Exception {
         mockMvc.perform(get("/test/validation-exception"))
                 .andExpect(status().isBadRequest())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
@@ -76,7 +80,7 @@ public class ExceptionHierarchyTest {
      * TechnicalException with custom message 테스트
      */
     @Test
-    public void testTechnicalExceptionWithCustomMessage() throws Exception {
+    void testTechnicalExceptionWithCustomMessage() throws Exception {
         mockMvc.perform(get("/test/technical-exception-custom"))
                 .andExpect(status().isInternalServerError())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
@@ -91,7 +95,7 @@ public class ExceptionHierarchyTest {
      * BusinessException with business rule violation 테스트
      */
     @Test
-    public void testDomainExceptionBusinessRule() throws Exception {
+    void testDomainExceptionBusinessRule() throws Exception {
         mockMvc.perform(get("/test/domain-exception-business-rule"))
                 .andExpect(status().isBadRequest())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
@@ -106,7 +110,7 @@ public class ExceptionHierarchyTest {
      * ValidationException with parameter out of range 테스트
      */
     @Test
-    public void testValidationExceptionParameterRange() throws Exception {
+    void testValidationExceptionParameterRange() throws Exception {
         mockMvc.perform(get("/test/validation-exception-range"))
                 .andExpect(status().isBadRequest())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
@@ -121,7 +125,7 @@ public class ExceptionHierarchyTest {
      * 기존 ApplicationException 호환성 테스트 (하위 호환성 확인)
      */
     @Test
-    public void testBusinessExceptionCompatibility() throws Exception {
+    void testBusinessExceptionCompatibility() throws Exception {
         mockMvc.perform(get("/test/business-exception-compatibility"))
                 .andExpect(status().isInternalServerError())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
@@ -132,49 +136,6 @@ public class ExceptionHierarchyTest {
                 .andExpect(jsonPath("$.timestamp").exists());
     }
 
-    /**
-     * 테스트용 컨트롤러
-     */
-    @RestController
-    public static class TestController {
-
-        @GetMapping("/test/technical-exception")
-        public String testTechnicalException() {
-            throw new TechnicalException(ErrorCode.PROPERTY_CONVERSION_ERROR);
-        }
-
-        @GetMapping("/test/domain-exception")
-        public String testDomainException() {
-            throw new BusinessException(ErrorCode.BOOKMARK_NOT_FOUND);
-        }
-
-        @GetMapping("/test/validation-exception")
-        public String testValidationException() {
-            throw new ValidationException(ErrorCode.INVALID_PARAMETER_FORMAT);
-        }
-
-        @GetMapping("/test/technical-exception-custom")
-        public String testTechnicalExceptionCustom() {
-            throw new TechnicalException(ErrorCode.DATA_PARSING_ERROR, "Custom parsing error message");
-        }
-
-        @GetMapping("/test/domain-exception-business-rule")
-        public String testDomainExceptionBusinessRule() {
-            throw new BusinessException(ErrorCode.BUSINESS_RULE_VIOLATION);
-        }
-
-        @GetMapping("/test/validation-exception-range")
-        public String testValidationExceptionRange() {
-            throw new ValidationException(ErrorCode.PARAMETER_OUT_OF_RANGE);
-        }
-
-        @GetMapping("/test/business-exception-compatibility")
-        public String testBusinessExceptionCompatibility() {
-            // 기존 방식으로 BusinessException을 사용하려고 하면 컴파일 에러가 발생해야 함
-            // 대신 구체적인 하위 클래스를 사용해야 함
-            throw new TechnicalException("Legacy compatibility test");
-        }
-    }
 
     @TestConfiguration
     static class TestConfig {

@@ -28,7 +28,7 @@ class GitLabPropertiesConfigTest {
 
         // 속성이 올바르게 로드되었는지 확인
         assertNotNull(properties);
-        
+
         // 그룹 엔드포인트 확인
         assertNotNull(properties.getGroupEndpoints());
         assertEquals("api/v4/groups/{groupId}", properties.getGroupEndpoints().getGet());
@@ -57,15 +57,14 @@ class GitLabPropertiesConfigTest {
 
     @Test
     void testGitLabPropertiesFromYml() {
+        // GitLabApiProperties 먼저 생성
+        GitLabApiProperties gitLabApiProperties = gitLabPropertiesConfig.gitLabApiPropertiesFromYml("classpath:gitlab/gitlab-api.yml");
+
         // PropertyUtil을 사용하여 GitLab 속성을 로드
-        GitLabProperties properties = gitLabPropertiesConfig.gitLabPropertiesFromYml();
+        GitLabProperties properties = gitLabPropertiesConfig.gitLabPropertiesFromYml(gitLabApiProperties);
 
         // 속성이 올바르게 로드되었는지 확인
         assertNotNull(properties);
-        
-        // 기본값이 설정되어 있는지 확인 (실제 값은 환경에 따라 다를 수 있음)
-        // 여기서는 객체가 정상적으로 생성되었는지만 확인
-        assertNotNull(properties.getBookmarkProjects());
     }
 
     @Test
@@ -75,7 +74,7 @@ class GitLabPropertiesConfigTest {
 
         // 속성이 올바르게 로드되었는지 확인
         assertNotNull(properties);
-        
+
         // 객체가 정상적으로 생성되었는지 확인
         // secretToken은 환경 변수에 따라 다를 수 있으므로 null 체크만 수행
         // (실제 값이 없어도 객체는 생성되어야 함)

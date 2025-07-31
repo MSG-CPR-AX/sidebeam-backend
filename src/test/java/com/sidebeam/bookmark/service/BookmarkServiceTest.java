@@ -2,7 +2,7 @@ package com.sidebeam.bookmark.service;
 
 import com.sidebeam.bookmark.dto.BookmarkDto;
 import com.sidebeam.bookmark.dto.CategoryNodeDto;
-import com.sidebeam.bookmark.domain.service.BookMarkValidator;
+import com.sidebeam.bookmark.domain.service.BookmarkValidator;
 import com.sidebeam.bookmark.service.impl.BookmarkServiceImpl;
 import com.sidebeam.external.gitlab.dto.AllFilesContentDto;
 import com.sidebeam.external.gitlab.dto.FileContentDto;
@@ -30,7 +30,7 @@ class BookmarkServiceTest {
     private SchemaValidationService schemaValidationService;
 
     @Mock
-    private BookMarkValidator bookMarkValidator;
+    private BookmarkValidator bookMarkValidator;
 
     private BookmarkService bookmarkService;
 
