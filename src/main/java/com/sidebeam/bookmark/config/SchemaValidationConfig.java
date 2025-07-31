@@ -1,6 +1,6 @@
 package com.sidebeam.bookmark.config;
 
-import com.sidebeam.bookmark.config.property.SchemaProperties;
+import com.sidebeam.bookmark.config.property.ValidationProperties;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
@@ -16,7 +16,7 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class SchemaValidationConfig {
 
-    private final SchemaProperties schemaProperties;
+    private final ValidationProperties validationProperties;
 
     /**
      * 애플리케이션 시작 시 스키마 파일의 존재 여부를 확인합니다.
@@ -24,25 +24,27 @@ public class SchemaValidationConfig {
      */
     @EventListener(ApplicationReadyEvent.class)
     public void validateSchemaConfiguration() {
-        if (!schemaProperties.isValidationEnabled()) {
+
+        ValidationProperties.Schema schema = validationProperties.getSchema();
+
+        if (!schema.isEnabled()) {
             log.info("Schema validation is disabled");
             return;
         }
 
-        String schemaPath = schemaProperties.getBookmarkSchemaPath();
+        String schemaPath = schema.getBookmarkSchemaPath();
         ClassPathResource resource = new ClassPathResource(schemaPath);
 
         if (!resource.exists()) {
             log.error("Schema file not found at path: {}. Schema validation will fail!", schemaPath);
-            if (schemaProperties.isStrictValidation()) {
+            if (schema.isStrict()) {
                 throw new IllegalStateException("Schema file not found at path: " + schemaPath);
             }
         } else {
             log.info("Schema validation configuration validated successfully:");
             log.info("  - Schema path: {}", schemaPath);
-            log.info("  - Validation enabled: {}", schemaProperties.isValidationEnabled());
-            log.info("  - Strict validation: {}", schemaProperties.isStrictValidation());
+            log.info("  - Validation enabled: {}", schema.isEnabled());
+            log.info("  - Strict validation: {}", schema.isStrict());
         }
     }
-
 }

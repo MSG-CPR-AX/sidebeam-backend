@@ -3,7 +3,7 @@ package com.sidebeam.bookmark.service.impl;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
-import com.sidebeam.bookmark.config.property.SchemaProperties;
+import com.sidebeam.bookmark.config.property.ValidationProperties;
 import com.sidebeam.bookmark.service.SchemaValidationService;
 import com.sidebeam.external.gitlab.dto.AllFilesContentDto;
 import com.sidebeam.external.gitlab.dto.FileContentDto;
@@ -21,7 +21,6 @@ import org.springframework.stereotype.Service;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
-import java.util.Map;
 
 /**
  * Implementation of the SchemaValidationService.
@@ -32,10 +31,10 @@ public class SchemaValidationServiceImpl implements SchemaValidationService {
 
     private final ObjectMapper yamlMapper;
     private final ObjectMapper jsonMapper;
-    private final SchemaProperties schemaProperties;
+    private final ValidationProperties.Schema schemaValidationProperties;
 
-    public SchemaValidationServiceImpl(SchemaProperties schemaProperties) {
-        this.schemaProperties = schemaProperties;
+    public SchemaValidationServiceImpl(ValidationProperties validationProperties) {
+        this.schemaValidationProperties = validationProperties.getSchema();
         this.yamlMapper = new ObjectMapper(new YAMLFactory());
         this.jsonMapper = new ObjectMapper();
     }
@@ -43,7 +42,7 @@ public class SchemaValidationServiceImpl implements SchemaValidationService {
     @Override
     public void validateYamlContent(String yamlContent, String sourcePath) {
         // 스키마 검증이 비활성화된 경우 바로 리턴
-        if (!schemaProperties.isValidationEnabled()) {
+        if (!schemaValidationProperties.isEnabled()) {
             log.info("Schema validation is disabled, skipping validation for {}", sourcePath);
             return;
         }
@@ -65,7 +64,7 @@ public class SchemaValidationServiceImpl implements SchemaValidationService {
                 log.debug("Schema validation passed for {}", sourcePath);
             } catch (ValidationException e) {
                 // 엄격한 검증 모드인 경우에만 예외 발생
-                if (!schemaProperties.isStrictValidation()) {
+                if (!schemaValidationProperties.isStrict()) {
                     log.warn("Schema validation failed but continuing due to non-strict validation mode");
                     return;
                 }
@@ -81,7 +80,7 @@ public class SchemaValidationServiceImpl implements SchemaValidationService {
             log.error("Error loading schema or parsing YAML: {}", e.getMessage(), e);
 
             // 엄격한 검증 모드인 경우에만 예외 발생
-            if (schemaProperties.isStrictValidation()) {
+            if (schemaValidationProperties.isStrict()) {
                 throw new IllegalArgumentException("Error loading schema or parsing YAML", e);
             } else {
                 log.warn("Schema loading failed but continuing due to non-strict validation mode");
@@ -92,7 +91,7 @@ public class SchemaValidationServiceImpl implements SchemaValidationService {
     @Override
     public void validateAllYamlFiles(AllFilesContentDto allFilesContent) {
         // 스키마 검증이 비활성화된 경우 바로 리턴
-        if (!schemaProperties.isValidationEnabled()) {
+        if (!schemaValidationProperties.isEnabled()) {
             log.debug("Schema validation is disabled, skipping validation for all files");
             return;
         }
@@ -112,7 +111,7 @@ public class SchemaValidationServiceImpl implements SchemaValidationService {
             }
         }
 
-        if (hasErrors && schemaProperties.isStrictValidation()) {
+        if (hasErrors && schemaValidationProperties.isStrict()) {
             throw new IllegalArgumentException("Schema validation failed for one or more files:\n" + errorMessages);
         } else if (hasErrors) {
             log.warn("Schema validation failed for some files but continuing due to non-strict validation mode");
@@ -122,7 +121,7 @@ public class SchemaValidationServiceImpl implements SchemaValidationService {
     @Override
     public String loadBookmarkSchema() throws IOException {
 
-        String schemaPath = schemaProperties.getBookmarkSchemaPath();
+        String schemaPath = schemaValidationProperties.getBookmarkSchemaPath();
         log.debug("Loading bookmark schema from path: {}", schemaPath);
 
         try (InputStream inputStream = new ClassPathResource(schemaPath).getInputStream()) {
