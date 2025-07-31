@@ -62,7 +62,7 @@ public class SchemaValidationServiceImpl implements SchemaValidationService {
             // Validate
             try {
                 schema.validate(jsonArray);
-                log.info("Schema validation passed for {}", sourcePath);
+                log.debug("Schema validation passed for {}", sourcePath);
             } catch (ValidationException e) {
                 // 엄격한 검증 모드인 경우에만 예외 발생
                 if (!schemaProperties.isStrictValidation()) {
@@ -128,7 +128,7 @@ public class SchemaValidationServiceImpl implements SchemaValidationService {
         try (InputStream inputStream = new ClassPathResource(schemaPath).getInputStream()) {
 
             String schema = new String(inputStream.readAllBytes(), StandardCharsets.UTF_8);
-            log.info("Successfully loaded bookmark schema from: {}", schemaPath);
+            log.debug("Successfully loaded bookmark schema from: {}", schemaPath);
 
             return schema;
 

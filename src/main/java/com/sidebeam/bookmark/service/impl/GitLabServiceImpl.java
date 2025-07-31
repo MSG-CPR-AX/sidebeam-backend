@@ -40,7 +40,7 @@ public class GitLabServiceImpl implements GitLabService {
     }
 
     private Mono<AllFilesContentDto> retrieveAndCacheAllYamlFiles() {
-        log.info("GitLab API를 통해 모든 YAML 파일 가져오기");
+        log.debug("GitLab API를 통해 모든 YAML 파일 가져오기");
 
         String rootGroupId = gitLabProperties.getRootGroupId();
         if (StringUtils.isEmpty(rootGroupId)) {
@@ -56,18 +56,5 @@ public class GitLabServiceImpl implements GitLabService {
                 .collectList()
                 .flatMap(fileRetriever::retrieveFileContents) // 위임
                 .flatMap(springCacheManager::cacheData);
-    }
-
-    @Override
-    public String retrieveYamlFile(String filePath) {
-        return fileRetriever.retrieveSingleFileContent(gitLabProperties.getProjectId(), filePath)
-                .block();
-    }
-
-    @Override
-    public List<String> retrieveYamlFiles() {
-        return fileRetriever.retrieveProjectFiles(gitLabProperties.getProjectId())
-                .collectList()
-                .block();
     }
 }

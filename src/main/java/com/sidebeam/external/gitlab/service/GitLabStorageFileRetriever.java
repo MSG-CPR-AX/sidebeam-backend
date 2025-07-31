@@ -10,7 +10,6 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * GitLab 저장소에서 파일을 조회하는 전용 컴포넌트입니다.
@@ -34,20 +33,16 @@ public class GitLabStorageFileRetriever {
         String projectId = project.id().toString();
         String projectPath = project.pathWithNamespace();
         
-        log.info("프로젝트 {}의 파일 목록 가져오기", projectPath);
+        log.debug("프로젝트 {}의 파일 목록 가져오기", projectPath);
 
         return gitLabApiClient.getRepositoryFiles(projectId, projectPath)
                 .filter(fileDto -> {
-                    String name = (String) fileDto.name();
-                    return name.endsWith(gitLabProperties.getFileExtension()) || isDirectory(fileDto.type());
+                    String name = fileDto.name();
+                    return (gitLabProperties.isIncludedFile(name) && !gitLabProperties.isExcluded(name))
+                            || isDirectory(fileDto.type());
                 })
-                .flatMap(fileDto -> {
-                    if (isDirectory(fileDto.type())) {
-                        return this.retrieveFilesInDirectory(projectId, fileDto.path());
-                    } else {
-                        return Flux.just((String) fileDto.path());
-                    }
-                })
+                .flatMap(fileDto -> isDirectory(fileDto.type()) ?
+                                this.retrieveFilesInDirectory(projectId, fileDto.path()) : Flux.just(fileDto.path()))
                 .collectList()
                 .map(filePaths -> new ProjectFilesDto(projectId, filePaths));
     }
@@ -57,7 +52,7 @@ public class GitLabStorageFileRetriever {
      */
     private Flux<String> retrieveFilesInDirectory(String projectId, String directoryPath) {
         return gitLabApiClient.getRepositoryFiles(projectId, directoryPath)
-                .filter(file -> file.hasExtension(gitLabProperties.getFileExtension()))
+                .filter(file -> file.isFile() && gitLabProperties.isIncludedFile(file.name()))
                 .map(GitLabFileDto::path);
     }
 
@@ -67,6 +62,7 @@ public class GitLabStorageFileRetriever {
     public Mono<AllFilesContentDto> retrieveFileContents(List<ProjectFilesDto> projectFilesList) {
 
         List<Mono<FileContentDto>> fileContentMonos = new ArrayList<>();
+        log.debug("File List : {}", projectFilesList);
 
         for (ProjectFilesDto projectFiles : projectFilesList) {
             String projectId = projectFiles.projectId();
@@ -77,7 +73,7 @@ public class GitLabStorageFileRetriever {
                         gitLabApiClient.getFileContent(projectId, filePath)
                                 .map(content -> new FileContentDto(filePath, content))
                                 .doOnSuccess(fileContent ->
-                                        log.info("파일 내용 가져옴: {}", fileContent.filePath()));
+                                        log.debug("파일 내용 가져옴: {}", fileContent.filePath()));
 
                 fileContentMonos.add(fileContentMono);
             }
@@ -100,7 +96,7 @@ public class GitLabStorageFileRetriever {
      */
     public Flux<String> retrieveProjectFiles(String projectId) {
         return gitLabApiClient.getRepositoryFiles(projectId, "")
-                .filter(file -> file.hasExtension(gitLabProperties.getFileExtension()) || file.isDirectory())
+                .filter(file -> (file.isFile() && gitLabProperties.isIncludedFile(file.name())) || file.isDirectory())
                 .flatMap(file -> {
                     if (file.isDirectory()) {
                         return retrieveFilesInDirectory(projectId, file.path());

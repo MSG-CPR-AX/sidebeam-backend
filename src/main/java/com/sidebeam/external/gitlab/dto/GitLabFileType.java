@@ -32,9 +32,6 @@ public enum GitLabFileType {
 
     /**
      * 문자열 값으로부터 GitLabFileType을 찾습니다.
-     *
-     * @param value 문자열 값
-     * @return 해당하는 GitLabFileType, 없으면 null
      */
     public static GitLabFileType fromValue(String value) {
         for (GitLabFileType type : values()) {

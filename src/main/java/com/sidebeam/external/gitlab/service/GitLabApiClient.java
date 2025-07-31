@@ -8,15 +8,20 @@ import com.sidebeam.external.gitlab.dto.GitLabGroupDto;
 import com.sidebeam.external.gitlab.dto.GitLabProjectDto;
 import com.sidebeam.external.gitlab.dto.RepositoryFileDto;
 import com.sidebeam.external.gitlab.util.GitLabApiPagingUtils;
+import io.netty.handler.ssl.SslContextBuilder;
+import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.client.reactive.ReactorClientHttpConnector;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.netty.http.client.HttpClient;
 
+import javax.net.ssl.SSLException;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -37,9 +42,32 @@ public class GitLabApiClient {
     public GitLabApiClient(WebClient.Builder webClientBuilder, GitLabProperties gitLabProperties, GitLabApiProperties apiProperties) {
         this.gitLabProperties = gitLabProperties;
         this.apiProperties = apiProperties;
+
+        // SSL 검증을 비활성화한 HttpClient 생성
+        HttpClient httpClient = HttpClient.create()
+                .wiretap(true) // 네트워크 레벨 로깅 활성화
+                .secure(sslSpec -> {
+                    try {
+                        sslSpec.sslContext(
+                                SslContextBuilder.forClient()
+                                        .trustManager(InsecureTrustManagerFactory.INSTANCE)
+                                        .build()
+                        );
+                    } catch (SSLException e) {
+                        throw new RuntimeException(e);
+                    }
+                });
+
+
         this.gitLabWebClient = webClientBuilder
+                .clientConnector(new ReactorClientHttpConnector(httpClient))
                 .baseUrl(gitLabProperties.getApiUrl())
                 .defaultHeader("PRIVATE-TOKEN", gitLabProperties.getAccessToken())
+                .filter((request, next) -> {
+                    // 요청 URL 로깅
+                    log.debug("GitLab API 요청: {} {}", request.method(), request.url());
+                    return next.exchange(request);
+                })
                 .build();
     }
 
@@ -84,10 +112,11 @@ public class GitLabApiClient {
      * 이 메서드는 하위 호환성을 위해 유지됩니다.
      */
     public Flux<GitLabProjectDto> getProjectIdListByGroupId(String groupId) {
+
         log.debug("Fetching projects for groupId: {}", groupId);
 
         String path = apiProperties.getGroupEndpoints().getProjects();
-        
+
         return GitLabApiPagingUtils.paginateAll(page -> gitLabWebClient.get()
                         .uri(uriBuilder -> uriBuilder
                                 .path("/" + path)
@@ -96,8 +125,10 @@ public class GitLabApiClient {
                                 .queryParam(GitLabApiConstants.PARAM_INCLUDE_SUBGROUPS, true)
                                 .build(groupId))
                         .retrieve()
-                        .toEntityList(new ParameterizedTypeReference<List<GitLabProjectDto>>() {}))
-                        .flatMap(Flux::fromIterable); // flatten List<GitLabProjectDto> → GitLabProjectDto
+                        .toEntityList(new ParameterizedTypeReference<GitLabProjectDto>() {}))
+                .doOnNext(project -> log.debug("프로젝트 수신: ID={}, Name={}", project.id(), project.name()))
+                .doOnComplete(() -> log.debug("모든 프로젝트 조회 완료 - groupId: {}", groupId))
+                .doOnError(error -> log.error("전체 프로젝트 조회 실패 - groupId: {}", groupId, error)); // flatten List<GitLabProjectDto> → GitLabProjectDto
     }
 
     /**
