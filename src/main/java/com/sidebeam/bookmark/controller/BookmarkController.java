@@ -35,7 +35,7 @@ public class BookmarkController {
     @GetMapping
     @Operation(summary = "Get all bookmarks", description = "Returns a list of all bookmarks from all YAML files")
     public List<BookmarkDto> retrieveAllBookmarks() {
-        log.info("REST request to get all bookmarks");
+        log.debug("REST request to get all bookmarks");
         return bookmarkService.retrieveAllBookmarks();
     }
 
@@ -49,7 +49,7 @@ public class BookmarkController {
     @GetMapping("/categories")
     @Operation(summary = "Get category tree", description = "Returns a hierarchical tree of all bookmark categories")
     public CategoryNodeDto getCategoryTree() {
-        log.info("REST request to get category tree");
-        return bookmarkService.getCategoryTree();
+        log.debug("REST request to get category tree");
+        return bookmarkService.retrieveCategoryTree();
     }
 }

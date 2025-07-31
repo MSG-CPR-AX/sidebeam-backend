@@ -1,5 +1,6 @@
 package com.sidebeam.bookmark.service;
 
+import com.sidebeam.external.gitlab.dto.AllFilesContentDto;
 import java.io.IOException;
 
 /**
@@ -17,12 +18,12 @@ public interface SchemaValidationService {
     void validateYamlContent(String yamlContent, String sourcePath);
 
     /**
-     * Validates all YAML files in the given map against the bookmark schema.
+     * Validates all YAML files in the given DTO against the bookmark schema.
      *
-     * @param yamlFiles Map of file paths to YAML content
+     * @param allFilesContent DTO containing file paths and YAML content
      * @throws IllegalArgumentException if any YAML file is invalid
      */
-    void validateAllYamlFiles(java.util.Map<String, String> yamlFiles);
+    void validateAllYamlFiles(AllFilesContentDto allFilesContent);
 
     /**
      * Loads the bookmark schema from the classpath.

@@ -8,12 +8,13 @@ import com.sidebeam.bookmark.mapper.BookmarkMapper;
 import com.sidebeam.common.cache.config.CacheConfig;
 import com.sidebeam.bookmark.domain.model.Bookmark;
 import com.sidebeam.bookmark.domain.model.CategoryNode;
-import com.sidebeam.bookmark.domain.model.PackageNode;
+import com.sidebeam.bookmark.domain.service.BookmarkValidator;
 import com.sidebeam.bookmark.service.BookmarkService;
 import com.sidebeam.bookmark.service.GitLabService;
+import com.sidebeam.external.gitlab.dto.AllFilesContentDto;
+import com.sidebeam.external.gitlab.dto.FileContentDto;
 import com.sidebeam.bookmark.service.SchemaValidationService;
 import com.sidebeam.bookmark.util.CategoryTreeBuilder;
-import com.sidebeam.bookmark.util.PackageTreeBuilder;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.CacheEvict;
@@ -23,10 +24,7 @@ import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 
 /**
  * Implementation of BookmarkService.
@@ -37,6 +35,7 @@ public class BookmarkServiceImpl implements BookmarkService {
 
     private final GitLabService gitLabService;
     private final SchemaValidationService schemaValidationService;
+    private final BookmarkValidator bookMarkValidator;
     private final ObjectMapper yamlMapper;
 
     /**
@@ -53,9 +52,10 @@ public class BookmarkServiceImpl implements BookmarkService {
     @Autowired @Lazy
     private BookmarkService self;
 
-    public BookmarkServiceImpl(GitLabService gitLabService, SchemaValidationService schemaValidationService) {
+    public BookmarkServiceImpl(GitLabService gitLabService, SchemaValidationService schemaValidationService, BookmarkValidator bookMarkValidator) {
         this.gitLabService = gitLabService;
         this.schemaValidationService = schemaValidationService;
+        this.bookMarkValidator = bookMarkValidator;
         this.yamlMapper = new ObjectMapper(new YAMLFactory());
     }
 
@@ -69,38 +69,37 @@ public class BookmarkServiceImpl implements BookmarkService {
     @Override
     @Cacheable(CacheConfig.BOOKMARKS_CACHE)
     public List<BookmarkDto> retrieveAllBookmarks() {
-        log.info("Fetching all bookmarks from GitLab");
-        List<Bookmark> bookmarks = new ArrayList<>();
-        Map<String, String> yamlFiles = gitLabService.retrieveAllYamlFiles();
+        log.debug("Fetching all bookmarks from GitLab");
 
-        // Validate all YAML files against the schema
+        // 모든 데이터 파일 조회
+        AllFilesContentDto allFilesContent = gitLabService.retrieveAllYamlFiles();
+
+        // 정의된 스키마 기반 조회된 모든 YAML의 유효성 검증
         try {
-            schemaValidationService.validateAllYamlFiles(yamlFiles);
-            log.info("All YAML files passed schema validation");
+            schemaValidationService.validateAllYamlFiles(allFilesContent);
+            log.debug("All YAML files passed schema validation");
         } catch (IllegalArgumentException e) {
+            // TODO : 오류 처리 고도화 필요
             log.warn("Schema validation failed: {}", e.getMessage());
-            // Continue processing even if validation fails
+            return new ArrayList<>();
         }
 
-        for (Map.Entry<String, String> entry : yamlFiles.entrySet()) {
-            String key = entry.getKey();
-            String content = entry.getValue();
+        List<Bookmark> bookmarks = new ArrayList<>();
+
+        for (FileContentDto fileContent : allFilesContent.fileContents()) {
+            String filePath = fileContent.filePath();
+            String content = fileContent.content();
             try {
-                List<Bookmark> fileBookmarks = parseYamlContent(content);
-                // Process each bookmark to set source path and module information
-                List<Bookmark> processedBookmarks = fileBookmarks.stream()
-                    .map(bookmark -> processBookmark(bookmark, key))
-                    .collect(Collectors.toList());
-                bookmarks.addAll(processedBookmarks);
+                bookmarks.addAll(this.parseYamlContent(content));
             } catch (Exception e) {
-                log.error("Error parsing YAML file: {}", key, e);
+                log.error("Error parsing YAML file: {}", filePath, e);
             }
         }
 
-        // Check for duplicate URLs
-        checkDuplicateUrls(bookmarks);
+        // 중복 URL 존재 유무 검증
+        bookMarkValidator.checkDuplicateUrls(bookmarks);
 
-        log.info("Fetched {} bookmarks from {} files", bookmarks.size(), yamlFiles.size());
+        log.debug("Fetched {} bookmarks from {} files", bookmarks.size(), allFilesContent.fileContents().size());
         return BookmarkMapper.INSTANCE.toDto(bookmarks);
     }
 
@@ -113,8 +112,8 @@ public class BookmarkServiceImpl implements BookmarkService {
      */
     @Override
     @Cacheable(CacheConfig.CATEGORY_TREE_CACHE)
-    public CategoryNodeDto getCategoryTree() {
-        log.info("Building category tree");
+    public CategoryNodeDto retrieveCategoryTree() {
+        log.debug("Building category tree");
         // self 프록시를 통해 @Cacheable 어노테이션이 적용된 메서드를 호출하여
         // Spring AOP 프록시 메커니즘이 정상적으로 작동하도록 보장합니다.
         List<BookmarkDto> bookmarks = self.retrieveAllBookmarks();
@@ -123,7 +122,7 @@ public class BookmarkServiceImpl implements BookmarkService {
                 .toList();
 
         CategoryNode root = CategoryTreeBuilder.buildTree(categories);
-        log.info("Built category tree with {} categories", categories.size());
+        log.debug("Built category tree with {} categories", categories.size());
         return BookmarkMapper.INSTANCE.toDto(root);
     }
 
@@ -138,7 +137,7 @@ public class BookmarkServiceImpl implements BookmarkService {
     @Override
     @CacheEvict(value = {CacheConfig.BOOKMARKS_CACHE, CacheConfig.CATEGORY_TREE_CACHE}, allEntries = true)
     public void refreshBookmarks() {
-        log.info("Refreshing bookmark data");
+        log.debug("Refreshing bookmark data");
         // The cache eviction will force a reload on next access
     }
 
@@ -150,112 +149,6 @@ public class BookmarkServiceImpl implements BookmarkService {
      * @throws IOException YAML 파싱 중 오류가 발생한 경우
      */
     private List<Bookmark> parseYamlContent(String content) throws IOException {
-        return yamlMapper.readValue(content,
-                yamlMapper.getTypeFactory().constructCollectionType(List.class, Bookmark.class));
+        return yamlMapper.readValue(content, yamlMapper.getTypeFactory().constructCollectionType(List.class, Bookmark.class));
     }
-
-    /**
-     * Process a bookmark to set source path and module information.
-     * Creates a new immutable Bookmark record with the processed data.
-     *
-     * @param bookmark The original bookmark
-     * @param key The source key in format "moduleName:fileName"
-     * @return A new processed Bookmark record
-     */
-    private Bookmark processBookmark(Bookmark bookmark, String key) {
-        // Extract module name from the key
-        String moduleName = key.contains(":") ? key.substring(0, key.indexOf(':')) : "unknown";
-
-        // Create new metadata map with module information
-        Map<String, Object> newMeta = bookmark.getMeta() != null ? new HashMap<>(bookmark.getMeta()) : new HashMap<>();
-        newMeta.put("module", moduleName);
-
-        // Process packages
-        List<PackageNode> processedPackages = processPackages(bookmark.getPackages());
-
-        // Create new Bookmark with processed data
-        return Bookmark.builder()
-            .name(bookmark.getName())
-            .url(bookmark.getUrl())
-            .domain(bookmark.getDomain())
-            .category(bookmark.getCategory())
-            .packages(processedPackages)
-            .meta(newMeta)
-            .sourcePath(key) // Set source path to the key
-            .build();
-    }
-
-    /**
-     * Process packages for a bookmark, converting from string list to PackageNode structure if needed.
-     * This handles backward compatibility with the old format.
-     *
-     * @param packages The original packages list
-     * @return Processed list of PackageNode objects
-     */
-    @SuppressWarnings("unchecked")
-    private List<PackageNode> processPackages(List<PackageNode> packages) {
-        // If packages is already in the correct format, return as is
-        if (packages != null && !packages.isEmpty() && packages.get(0) instanceof PackageNode) {
-            return packages;
-        }
-
-        // Handle the case where packages might be a List<String> from YAML
-        Object packagesObj = yamlMapper.convertValue(packages, Object.class);
-        if (packagesObj instanceof List) {
-            List<?> packagesList = (List<?>) packagesObj;
-            if (!packagesList.isEmpty() && packagesList.get(0) instanceof String) {
-                // Convert from List<String> to List<PackageNode>
-                List<String> packagePaths = (List<String>) packagesList;
-                PackageNode root = PackageTreeBuilder.buildTree(packagePaths);
-                if (root.getChildren() != null && !root.getChildren().isEmpty()) {
-                    return root.getChildren();
-                } else {
-                    return null;
-                }
-            }
-        }
-
-        return packages;
-    }
-
-    /**
-     * Check for duplicate URLs across all bookmarks and log an error if any are found.
-     * This is a validation step to ensure data integrity.
-     *
-     * @param bookmarks The list of bookmarks to check
-     * @throws IllegalStateException if duplicate URLs are found
-     */
-    private void checkDuplicateUrls(List<Bookmark> bookmarks) {
-        Map<String, List<Bookmark>> urlMap = new HashMap<>();
-
-        // Group bookmarks by URL
-        for (Bookmark bookmark : bookmarks) {
-            String url = bookmark.getUrl();
-            if (!urlMap.containsKey(url)) {
-                urlMap.put(url, new ArrayList<>());
-            }
-            urlMap.get(url).add(bookmark);
-        }
-
-        // Check for duplicates
-        boolean hasDuplicates = false;
-        StringBuilder errorMessage = new StringBuilder("Duplicate URLs found:\n");
-
-        for (Map.Entry<String, List<Bookmark>> entry : urlMap.entrySet()) {
-            if (entry.getValue().size() > 1) {
-                hasDuplicates = true;
-                errorMessage.append("URL: ").append(entry.getKey()).append("\n");
-                for (Bookmark bookmark : entry.getValue()) {
-                    errorMessage.append("  - ").append(bookmark.getName())
-                            .append(" (").append(bookmark.getSourcePath()).append(")\n");
-                }
-            }
-        }
-
-        if (hasDuplicates) {
-            log.error(errorMessage.toString());
-            throw new IllegalStateException("Duplicate URLs found in bookmarks. See logs for details.");
-        }
-    }
-
 }

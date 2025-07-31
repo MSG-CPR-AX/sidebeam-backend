@@ -3,7 +3,8 @@ package com.sidebeam.bookmark.service.impl;
 import com.sidebeam.external.gitlab.service.GitLabApiClient;
 import com.sidebeam.external.gitlab.service.GitLabStorageFileRetriever;
 import com.sidebeam.common.cache.component.SpringCacheManager;
-import com.sidebeam.external.gitlab.property.GitLabProperties;
+import com.sidebeam.external.gitlab.config.property.GitLabProperties;
+import com.sidebeam.external.gitlab.dto.AllFilesContentDto;
 import com.sidebeam.bookmark.service.GitLabService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -11,9 +12,8 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 
-import java.util.HashMap;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 /**
  * GitLab 리포지토리와 상호 작용하기 위한 서비스입니다.
@@ -33,40 +33,28 @@ public class GitLabServiceImpl implements GitLabService {
     private final GitLabStorageFileRetriever fileRetriever;  // 새로 추가
     private final SpringCacheManager springCacheManager;
 
-    public Map<String, String> retrieveAllYamlFiles() {
-        return springCacheManager.getCachedData(Map.class)
+    public AllFilesContentDto retrieveAllYamlFiles() {
+        return springCacheManager.getCachedData(AllFilesContentDto.class)
                 .switchIfEmpty(this.retrieveAndCacheAllYamlFiles())
                 .block();
     }
 
-    private Mono<Map<String, String>> retrieveAndCacheAllYamlFiles() {
-        log.info("GitLab API를 통해 모든 YAML 파일 가져오기");
+    private Mono<AllFilesContentDto> retrieveAndCacheAllYamlFiles() {
+        log.debug("GitLab API를 통해 모든 YAML 파일 가져오기");
 
         String rootGroupId = gitLabProperties.getRootGroupId();
         if (StringUtils.isEmpty(rootGroupId)) {
             log.error("루트 그룹 ID가 설정되지 않았습니다");
-            return Mono.just(new HashMap<>());
+            return Mono.just(new AllFilesContentDto(new ArrayList<>()));
         }
 
-        return gitLabApiClient.getProjectIdListByGroupId(rootGroupId)
-                .flatMap(fileRetriever::retrieverProjectFiles)  // 위임
+        return gitLabApiClient
+                // 그룹 하위 프로젝트 목록 조회(서브그룹의 프로젝트 포함)
+                .getProjectIdListByGroupId(rootGroupId)
+                // 프로젝트 내부 파일 목록 조회
+                .flatMap(fileRetriever::retrieverProjectFiles)
                 .collectList()
-                .map(fileRetriever::mergeProjectFiles)    // 위임
                 .flatMap(fileRetriever::retrieveFileContents) // 위임
                 .flatMap(springCacheManager::cacheData);
-    }
-
-    @Override
-    public String retrieveYamlFile(String filePath) {
-        return fileRetriever.retrieveSingleFileContent(
-                        gitLabProperties.getProjectId(), filePath)
-                .block();
-    }
-
-    @Override
-    public List<String> retrieveYamlFiles() {
-        return fileRetriever.retrieveProjectFiles(gitLabProperties.getProjectId())
-                .collectList()
-                .block();
     }
 }
