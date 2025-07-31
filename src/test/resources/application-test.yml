@@ -1,0 +1,55 @@
+# 테스트 환경 설정
+server:
+  port: 8095
+
+spring:
+  application:
+    name: sidebar-backend-test
+  cache:
+    type: simple
+
+logging:
+  level:
+    # 테스트 환경에서는 로그 레벨을 낮춤
+    com.sidebeam: INFO
+    org.springframework: WARN
+
+# GitLab 설정 (테스트용)
+gitlab:
+  api-url: https://gitlab.com
+  access-token: ${GITLAB_ACCESS_TOKEN:test-token}
+  root-group-id: ${GITLAB_ROOT_GROUP_ID:12345}
+  branch: ${GITLAB_BRANCH:main}
+  bookmark-data-path: sidebar-data/bookmark-data
+  included-file-extensions:
+    - '.yml'
+    - '.yaml'
+  excluded-filenames:
+    - '.gitlab-ci.yml'
+  api:
+    config: classpath:/gitlab/gitlab-api.yml
+
+# 캐시 설정 (테스트용)
+cache:
+  enabled: false  # 테스트 환경에서는 캐시 비활성화
+  ttl: 60  # 짧은 TTL
+
+# 검증 설정 (테스트용 - 모든 검증 비활성화)
+validation:
+  # 스키마 검증 설정
+  schema:
+    bookmark-schema-path: bookmark-schema/bookmark.schema.json
+    # 스키마 검증 비활성화
+    enabled: false
+    # 엄격한 검증 모드 비활성화
+    strict: false
+  # 중복 검증 설정
+  duplicate:
+    # 중복 URL 검증 비활성화
+    enabled: false
+    # 엄격한 검증 모드 비활성화
+    strict: false
+
+# 웹훅 설정 (테스트용)
+webhook:
+  secret-token: ${WEBHOOK_SECRET_TOKEN:test-webhook-secret}

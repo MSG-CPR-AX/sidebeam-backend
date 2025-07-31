@@ -32,7 +32,7 @@ public class BookmarkInitializationService {
     public void loadBookmarksOnStartup() {
         log.info("Loading bookmarks on startup");
         bookmarkService.retrieveAllBookmarks();
-        bookmarkService.getCategoryTree();
+        bookmarkService.retrieveCategoryTree();
     }
 
     /**

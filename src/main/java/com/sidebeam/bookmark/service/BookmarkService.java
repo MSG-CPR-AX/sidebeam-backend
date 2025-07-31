@@ -1,7 +1,5 @@
 package com.sidebeam.bookmark.service;
 
-import com.sidebeam.bookmark.domain.model.Bookmark;
-import com.sidebeam.bookmark.domain.model.CategoryNode;
 import com.sidebeam.bookmark.dto.BookmarkDto;
 import com.sidebeam.bookmark.dto.CategoryNodeDto;
 
@@ -21,7 +19,7 @@ public interface BookmarkService {
      * 이 메서드는 북마크의 카테고리 정보를 사용하여 계층적인 카테고리 트리를 구성합니다.
      * 트리는 북마크 데이터를 탐색하고 카테고리별로 정렬하는 데 사용됩니다.
      */
-    CategoryNodeDto getCategoryTree();
+    CategoryNodeDto retrieveCategoryTree();
 
     /**
      * 북마크 데이터를 최신 상태로 갱신합니다.

@@ -1,5 +1,6 @@
 package com.sidebeam.external.gitlab.property;
 
+import com.sidebeam.external.gitlab.config.property.GitLabApiProperties;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 

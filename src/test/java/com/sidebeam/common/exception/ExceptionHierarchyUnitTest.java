@@ -12,7 +12,7 @@ import static org.junit.jupiter.api.Assertions.*;
 /**
  * 새로운 예외 계층 구조의 단위 테스트
  */
-public class ExceptionHierarchyUnitTest {
+class ExceptionHierarchyUnitTest {
 
     private GlobalExceptionHandler exceptionHandler;
     private MockHttpServletRequest request;
@@ -28,7 +28,7 @@ public class ExceptionHierarchyUnitTest {
      * TechnicalException 생성 및 처리 테스트
      */
     @Test
-    public void testTechnicalExceptionCreation() {
+    void testTechnicalExceptionCreation() {
         // Given
         TechnicalException exception = new TechnicalException(ErrorCode.PROPERTY_CONVERSION_ERROR);
         
@@ -48,7 +48,7 @@ public class ExceptionHierarchyUnitTest {
      * TechnicalException with custom message 테스트
      */
     @Test
-    public void testTechnicalExceptionWithCustomMessage() {
+    void testTechnicalExceptionWithCustomMessage() {
         // Given
         String customMessage = "Custom technical error message";
         TechnicalException exception = new TechnicalException(ErrorCode.DATA_PARSING_ERROR, customMessage);
@@ -68,7 +68,7 @@ public class ExceptionHierarchyUnitTest {
      * BusinessException 생성 및 처리 테스트
      */
     @Test
-    public void testDomainExceptionCreation() {
+    void testDomainExceptionCreation() {
         // Given
         BusinessException exception = new BusinessException(ErrorCode.BOOKMARK_NOT_FOUND);
         
@@ -88,7 +88,7 @@ public class ExceptionHierarchyUnitTest {
      * BusinessException with business rule violation 테스트
      */
     @Test
-    public void testDomainExceptionBusinessRule() {
+    void testDomainExceptionBusinessRule() {
         // Given
         BusinessException exception = new BusinessException(ErrorCode.BUSINESS_RULE_VIOLATION);
         
@@ -107,7 +107,7 @@ public class ExceptionHierarchyUnitTest {
      * ValidationException 생성 및 처리 테스트
      */
     @Test
-    public void testValidationExceptionCreation() {
+    void testValidationExceptionCreation() {
         // Given
         ValidationException exception = new ValidationException(ErrorCode.INVALID_PARAMETER_FORMAT);
         
@@ -127,7 +127,7 @@ public class ExceptionHierarchyUnitTest {
      * ValidationException with parameter out of range 테스트
      */
     @Test
-    public void testValidationExceptionParameterRange() {
+    void testValidationExceptionParameterRange() {
         // Given
         ValidationException exception = new ValidationException(ErrorCode.PARAMETER_OUT_OF_RANGE);
         
@@ -146,7 +146,7 @@ public class ExceptionHierarchyUnitTest {
      * SystemException 처리 테스트 (기존 기능 유지 확인)
      */
     @Test
-    public void testSystemExceptionHandling() {
+    void testSystemExceptionHandling() {
         // Given
         SystemException exception = new SystemException(ErrorCode.GITLAB_CONNECTION_ERROR);
         
@@ -165,7 +165,7 @@ public class ExceptionHierarchyUnitTest {
      * 예외 계층 구조 확인 테스트
      */
     @Test
-    public void testExceptionHierarchy() {
+    void testExceptionHierarchy() {
         // Given
         TechnicalException technicalException = new TechnicalException(ErrorCode.PROPERTY_CONVERSION_ERROR);
         BusinessException businessException = new BusinessException(ErrorCode.BOOKMARK_NOT_FOUND);
@@ -186,7 +186,7 @@ public class ExceptionHierarchyUnitTest {
      * ErrorCode 접근 테스트
      */
     @Test
-    public void testErrorCodeAccess() {
+    void testErrorCodeAccess() {
         // Given
         TechnicalException technicalException = new TechnicalException(ErrorCode.PROPERTY_CONVERSION_ERROR);
         BusinessException businessException = new BusinessException(ErrorCode.BOOKMARK_NOT_FOUND);
@@ -202,7 +202,7 @@ public class ExceptionHierarchyUnitTest {
      * 기존 호환성 생성자 테스트
      */
     @Test
-    public void testLegacyCompatibilityConstructors() {
+    void testLegacyCompatibilityConstructors() {
         // Given
         String message = "Legacy error message";
         RuntimeException cause = new RuntimeException("Cause");

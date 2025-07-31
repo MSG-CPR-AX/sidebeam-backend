@@ -1,12 +1,11 @@
 package com.sidebeam.common.response;
 
+import com.sidebeam.common.controller.TestController;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureWebMvc;
-import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.setup.MockMvcBuilders;
-import org.springframework.web.context.WebApplicationContext;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -14,50 +13,45 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 /**
  * ApiResponse와 GlobalResponseAdvice의 통합 테스트
  */
-@SpringBootTest
-@AutoConfigureWebMvc
-public class ApiResponseIntegrationTest {
+@ActiveProfiles("test")
+@WebMvcTest(TestController.class)
+class ApiResponseIntegrationTest {
 
     @Autowired
-    private WebApplicationContext webApplicationContext;
-
     private MockMvc mockMvc;
 
     @Test
-    public void testApiResponseWrapping() throws Exception {
-        mockMvc = MockMvcBuilders.webAppContextSetup(webApplicationContext).build();
-        
-        // 문자열 응답 테스트
-        mockMvc.perform(get("/api/test/string"))
+    void testApiResponseWrapping() throws Exception {
+        // 문자열 응답 테스트 - 문자열은 래핑되지 않음
+        mockMvc.perform(get("/test/string"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(200))
-                .andExpect(jsonPath("$.message").value("OK"))
-                .andExpect(jsonPath("$.data").value("Hello World"));
+                .andExpect(content().contentType("text/plain;charset=UTF-8"))
+                .andExpect(content().string("Hello, World!"));
     }
 
     @Test
-    public void testObjectResponseWrapping() throws Exception {
-        mockMvc = MockMvcBuilders.webAppContextSetup(webApplicationContext).build();
-        
-        // 객체 응답 테스트
-        mockMvc.perform(get("/api/test/object"))
+    void testObjectResponseWrapping() throws Exception {
+        // 객체 응답 테스트 - 객체는 ApiResponse로 래핑됨
+        mockMvc.perform(get("/test/object"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(200))
-                .andExpect(jsonPath("$.message").value("OK"))
+                .andExpect(content().contentType("application/json"))
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.code").value("200"))
+                .andExpect(jsonPath("$.message").value("요청이 성공적으로 처리되었습니다."))
                 .andExpect(jsonPath("$.data.id").value(1))
-                .andExpect(jsonPath("$.data.name").value("테스트 사용자"))
-                .andExpect(jsonPath("$.data.email").value("test@example.com"));
+                .andExpect(jsonPath("$.data.name").value("Test Object"))
+                .andExpect(jsonPath("$.data.active").value(true));
     }
 
     @Test
-    public void testApiResponseNotDoubleWrapped() throws Exception {
-        mockMvc = MockMvcBuilders.webAppContextSetup(webApplicationContext).build();
-        
-        // 이미 ApiResponse로 감싸진 응답 테스트
-        mockMvc.perform(get("/api/test/api-response"))
+    void testApiResponseNotDoubleWrapped() throws Exception {
+        // 이미 ApiResponse로 감싸진 응답 테스트 - 재래핑되지 않음
+        mockMvc.perform(get("/test/api-response"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(200))
-                .andExpect(jsonPath("$.message").value("커스텀 메시지"))
-                .andExpect(jsonPath("$.data").value("이미 ApiResponse로 감싸진 응답"));
+                .andExpect(content().contentType("application/json"))
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.code").value("200"))
+                .andExpect(jsonPath("$.message").value("요청이 성공적으로 처리되었습니다."))
+                .andExpect(jsonPath("$.data").value("Already wrapped response"));
     }
 }
