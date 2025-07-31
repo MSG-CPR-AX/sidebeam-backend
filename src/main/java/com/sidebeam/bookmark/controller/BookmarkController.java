@@ -33,7 +33,10 @@ public class BookmarkController {
      * GlobalResponseBodyAdvice에 의해 자동으로 ApiResponse로 래핑됩니다.
      */
     @GetMapping
-    @Operation(summary = "Get all bookmarks", description = "Returns a list of all bookmarks from all YAML files")
+    @Operation(
+            summary = "모든 북마크 조회",
+            description = "YAML 파일에서 파싱된 모든 북마크 목록을 반환합니다. 결과는 자동으로 ApiResponse로 래핑됩니다."
+    )
     public List<BookmarkDto> retrieveAllBookmarks() {
         log.debug("REST request to get all bookmarks");
         return bookmarkService.retrieveAllBookmarks();
@@ -47,7 +50,10 @@ public class BookmarkController {
      * GlobalResponseBodyAdvice에 의해 자동으로 ApiResponse로 래핑됩니다.
      */
     @GetMapping("/categories")
-    @Operation(summary = "Get category tree", description = "Returns a hierarchical tree of all bookmark categories")
+    @Operation(
+            summary = "카테고리 트리 조회",
+            description = "모든 북마크의 카테고리를 계층적 트리 구조로 반환합니다. 루트 노드부터 하위 카테고리까지 전체 구조를 제공합니다."
+    )
     public CategoryNodeDto getCategoryTree() {
         log.debug("REST request to get category tree");
         return bookmarkService.retrieveCategoryTree();

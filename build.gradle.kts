@@ -18,6 +18,7 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-cache")
     implementation("org.springframework.boot:spring-boot-starter-validation")
     implementation("org.springframework.boot:spring-boot-starter-webflux")
+    implementation("org.springframework.boot:spring-boot-starter-security")
 
     // Spring
     implementation("org.springframework.retry:spring-retry")
@@ -32,7 +33,7 @@ dependencies {
 
     // JSON Schema Validation
     implementation("org.everit.json:org.everit.json.schema:1.5.1")
-    implementation("org.json:json:20231013")
+    implementation("org.json:json:20250517")
 
     // Lombok
     compileOnly("org.projectlombok:lombok")
@@ -43,11 +44,11 @@ dependencies {
     annotationProcessor("org.mapstruct:mapstruct-processor:1.6.3")
 
     // API Documentation
-    implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.2.0")
+    implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.9")
 
     // Testing
     testImplementation("org.springframework.boot:spring-boot-starter-test")
-    testImplementation(platform("org.junit:junit-bom:5.10.0"))
+    testImplementation(platform("org.junit:junit-bom:5.13.4"))
     testImplementation("org.junit.jupiter:junit-jupiter")
 
     // Lombok for tests
