@@ -19,11 +19,11 @@ logging:
 gitlab:
   # GitLab API URL (예: https://gitlab.com)
   api-url: https://gitlab.com
-  # read_repository 권한을 가진 개인 액세스 토큰
-  access-token: ${GITLAB_ACCESS_TOKEN:}
-  # 모든 하위 그룹과 프로젝트를 가져올 루트 그룹 ID
-  root-group-id: ${GITLAB_ROOT_GROUP_ID:}
-  # 데이터를 가져올 브랜치 이름
+  # read_repository 권한을 가진 개인 액세스 토큰 (ENC(...) 제공용 환경변수 사용)
+  access-token: ${GITLAB_ACCESS_TOKEN_ENC:}
+  # 모든 하위 그룹과 프로젝트를 가져올 루트 그룹 ID (필요 시 ENC(...) 제공)
+  root-group-id: ${GITLAB_ROOT_GROUP_ID_ENC:}
+  # 데이터를 가져올 브랜치 이름 (평문 허용)
   branch: ${GITLAB_BRANCH:main}
   # 저장소 내 북마크 데이터 디렉토리 경로
   # 이 경로는 sidebeam-data가 아닌 다른 저장소에 사용됩니다
@@ -37,6 +37,11 @@ gitlab:
     - '.gitlab-ci.yml'
   api:
     config: classpath:/gitlab/gitlab-api.yml
+
+# Jasypt 설정 (마스터 키는 환경변수로만 주입)
+jasypt:
+  encryptor:
+    password: ${JASYPT_ENCRYPTOR_PASSWORD:}
 
 springdoc:
   api-docs:
@@ -72,5 +77,5 @@ validation:
 
 # 웹훅 설정
 webhook:
-  # GitLab 웹훅 검증을 위한 비밀 토큰
-  secret-token: ${WEBHOOK_SECRET_TOKEN:your-webhook-secret}
+  # GitLab 웹훅 검증을 위한 비밀 토큰 (ENC(...) 제공용 환경변수 사용)
+  secret-token: ${WEBHOOK_SECRET_TOKEN_ENC:}

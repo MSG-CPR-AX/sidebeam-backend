@@ -46,6 +46,9 @@ dependencies {
     // API Documentation
     implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.9")
 
+    // Jasypt (local profile only usage at runtime; dependency always available)
+    implementation("com.github.ulisesbocchio:jasypt-spring-boot-starter:3.0.5")
+
     // Testing
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation(platform("org.junit:junit-bom:5.13.4"))
