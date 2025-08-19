@@ -19,6 +19,9 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-validation")
     implementation("org.springframework.boot:spring-boot-starter-webflux")
     implementation("org.springframework.boot:spring-boot-starter-security")
+    
+    // Jasypt for property encryption (local profile only)
+    implementation("com.github.ulisesbocchio:jasypt-spring-boot-starter:3.0.5")
 
     // Spring
     implementation("org.springframework.retry:spring-retry")
@@ -66,4 +69,6 @@ dependencies {
 
 tasks.test {
     useJUnitPlatform()
+    // Pass system properties to test JVM
+    systemProperties(System.getProperties().toMap() as Map<String, Any>)
 }
