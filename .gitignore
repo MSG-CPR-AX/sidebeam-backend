@@ -49,3 +49,6 @@ application-local.yml
 
 ### Test Reports ###
 test-results/
+
+### Reference Codes ###
+reference/
