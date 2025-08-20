@@ -19,12 +19,17 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-validation")
     implementation("org.springframework.boot:spring-boot-starter-webflux")
     implementation("org.springframework.boot:spring-boot-starter-security")
+    implementation("org.springframework.boot:spring-boot-starter-aop")
     
     // Jasypt for property encryption (local profile only)
     implementation("com.github.ulisesbocchio:jasypt-spring-boot-starter:3.0.5")
 
-    // Spring
+    // Spring Retry (legacy)
     implementation("org.springframework.retry:spring-retry")
+
+    // Resilience4j (resiliency: circuit breaker, retry, bulkhead, reactor support)
+    implementation("io.github.resilience4j:resilience4j-spring-boot3:2.3.0")
+    implementation("io.github.resilience4j:resilience4j-reactor:2.3.0")
 
     // YAML Processing
     implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-yaml")
@@ -53,6 +58,7 @@ dependencies {
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation(platform("org.junit:junit-bom:5.13.4"))
     testImplementation("org.junit.jupiter:junit-jupiter")
+    testImplementation("com.tngtech.archunit:archunit-junit5:1.3.0")
 
     // Lombok for tests
     testCompileOnly("org.projectlombok:lombok")
