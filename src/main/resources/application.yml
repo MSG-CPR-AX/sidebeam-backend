@@ -121,3 +121,13 @@ resilience4j:
       gitlab:
         maxConcurrentCalls: 20
         maxWaitDuration: 1s
+
+
+# 보안 설정 (API Key 인증: 기본 비활성화)
+security:
+  api-key:
+    enabled: ${SECURITY_API_KEY_ENABLED:false}
+    header-name: ${SECURITY_API_KEY_HEADER:X-Api-Key}
+    value: ${SECURITY_API_KEY_VALUE:}
+    # 추가 제외 패턴(있다면 콤마로 구분)
+    exclude-patterns: ${SECURITY_API_KEY_EXCLUDES:}

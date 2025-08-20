@@ -1,26 +1,40 @@
 package com.sidebeam.common.core.config;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.sidebeam.common.core.config.property.SecurityProperties;
+import com.sidebeam.common.web.filter.ApiKeyAuthFilter;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration
 public class SecurityConfig {
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        http.authorizeHttpRequests(authorize ->
-                        authorize
-                                .requestMatchers(
-                                        "/swagger-ui/**",
-                                        "/swagger-ui.html",
-                                        "/api-docs/**"// 수정된 경로 추가!
-                                ).permitAll()
-                                .anyRequest().permitAll()
+    public SecurityFilterChain securityFilterChain(HttpSecurity http, ObjectProvider<SecurityProperties> securityPropertiesProvider, ObjectMapper objectMapper) throws Exception {
+        SecurityProperties props = securityPropertiesProvider.getIfAvailable(SecurityProperties::new);
+
+        http
+                .csrf(AbstractHttpConfigurer::disable)
+                .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .authorizeHttpRequests(authorize -> authorize
+                        .requestMatchers(
+                                "/swagger-ui/**",
+                                "/swagger-ui.html",
+                                "/api-docs/**",
+                                "/actuator/health",
+                                "/actuator/info",
+                                "/webhook/**"
+                        ).permitAll()
+                        .anyRequest().permitAll()
                 )
-                .csrf(AbstractHttpConfigurer::disable);
+                .addFilterBefore(new ApiKeyAuthFilter(props, objectMapper), UsernamePasswordAuthenticationFilter.class);
+
         return http.build();
     }
 }
