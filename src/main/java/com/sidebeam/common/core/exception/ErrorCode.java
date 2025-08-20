@@ -24,7 +24,7 @@ public enum ErrorCode {
     GITLAB_FILE_NOT_FOUND("GITLAB_FILE_NOT_FOUND", "GitLab에서 파일을 찾을 수 없습니다.", HttpStatus.NOT_FOUND),
 
     // 스키마 검증 오류
-    SCHEMA_VALIDATION_ERROR("SCHEMA_VALIDATION_ERROR", "스키마 유효성 검사에 실패했습니다.", HttpStatus.BAD_REQUEST),
+    SCHEMA_VALIDATION_ERROR("SCHEMA_VALIDATION_ERROR", "스키마 유효성 검사에 실패했습니다.", HttpStatus.UNPROCESSABLE_ENTITY),
 
     // 캐시 관련 오류
     CACHE_ERROR("CACHE_ERROR", "캐시 처리 중 오류가 발생했습니다.", HttpStatus.INTERNAL_SERVER_ERROR),
