@@ -2,6 +2,7 @@ package com.sidebeam.common.core.exception;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonInclude;
+import org.slf4j.MDC;
 
 import java.time.LocalDateTime;
 
@@ -21,12 +22,14 @@ public class ErrorResponse {
     
     private String path;
     private String details;
+    private String correlationId;
     
     /**
      * 기본 생성자
      */
     public ErrorResponse() {
         this.timestamp = LocalDateTime.now();
+        this.correlationId = MDC.get("correlationId");
     }
     
     /**
@@ -160,5 +163,13 @@ public class ErrorResponse {
     
     public void setDetails(String details) {
         this.details = details;
+    }
+
+    public String getCorrelationId() {
+        return correlationId;
+    }
+
+    public void setCorrelationId(String correlationId) {
+        this.correlationId = correlationId;
     }
 }

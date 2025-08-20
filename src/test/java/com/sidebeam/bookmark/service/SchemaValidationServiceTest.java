@@ -55,8 +55,8 @@ class SchemaValidationServiceTest {
               category: Test/Category
             """;
 
-        // Should throw an IllegalArgumentException
-        Exception exception = assertThrows(IllegalArgumentException.class,
+        // Should throw a domain ValidationException
+        Exception exception = assertThrows(com.sidebeam.common.core.exception.ValidationException.class,
                 () -> schemaValidationService.validateYamlContent(invalidYaml, "test.yml"));
 
         assertTrue(exception.getMessage().contains("domain") || exception.getMessage().contains("required"));
@@ -72,8 +72,8 @@ class SchemaValidationServiceTest {
               category: /InvalidCategory
             """;
 
-        // Should throw an IllegalArgumentException
-        Exception exception = assertThrows(IllegalArgumentException.class,
+        // Should throw a domain ValidationException
+        Exception exception = assertThrows(com.sidebeam.common.core.exception.ValidationException.class,
                 () -> schemaValidationService.validateYamlContent(invalidYaml, "test.yml"));
 
         assertTrue(exception.getMessage().contains("category") || exception.getMessage().contains("pattern"));

@@ -75,14 +75,8 @@ public class BookmarkServiceImpl implements BookmarkService {
         AllFilesContentDto allFilesContent = gitLabService.retrieveAllYamlFiles();
 
         // 정의된 스키마 기반 조회된 모든 YAML의 유효성 검증
-        try {
-            schemaValidationService.validateAllYamlFiles(allFilesContent);
-            log.debug("All YAML files passed schema validation");
-        } catch (IllegalArgumentException e) {
-            // TODO : 오류 처리 고도화 필요
-            log.warn("Schema validation failed: {}", e.getMessage());
-            return new ArrayList<>();
-        }
+        schemaValidationService.validateAllYamlFiles(allFilesContent);
+        log.debug("All YAML files passed schema validation");
 
         List<Bookmark> bookmarks = new ArrayList<>();
 
