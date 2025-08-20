@@ -92,3 +92,32 @@ jasypt:
     iv-generator-classname: org.jasypt.iv.RandomIvGenerator
     # 문자열 출력 타입 (기본값: base64)
     string-output-type: base64
+
+
+# Resilience4j 설정 (외부 연동 회복탄력성)
+resilience4j:
+  circuitbreaker:
+    instances:
+      gitlab:
+        registerHealthIndicator: true
+        slidingWindowType: COUNT_BASED
+        slidingWindowSize: 50
+        minimumNumberOfCalls: 10
+        failureRateThreshold: 50
+        waitDurationInOpenState: 10s
+        permittedNumberOfCallsInHalfOpenState: 5
+        automaticTransitionFromOpenToHalfOpenEnabled: true
+  retry:
+    instances:
+      gitlab:
+        maxAttempts: 3
+        waitDuration: 300ms
+        retryExceptions:
+          - org.springframework.web.reactive.function.client.WebClientRequestException
+          - java.io.IOException
+          - java.util.concurrent.TimeoutException
+  bulkhead:
+    instances:
+      gitlab:
+        maxConcurrentCalls: 20
+        maxWaitDuration: 1s

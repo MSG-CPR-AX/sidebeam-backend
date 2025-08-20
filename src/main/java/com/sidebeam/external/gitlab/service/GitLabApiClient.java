@@ -1,5 +1,7 @@
 package com.sidebeam.external.gitlab.service;
 
+import com.sidebeam.common.core.exception.ErrorCode;
+import com.sidebeam.common.core.exception.TechnicalException;
 import com.sidebeam.external.gitlab.constant.GitLabApiConstants;
 import com.sidebeam.external.gitlab.config.property.GitLabApiProperties;
 import com.sidebeam.external.gitlab.config.property.GitLabProperties;
@@ -8,12 +10,15 @@ import com.sidebeam.external.gitlab.dto.GitLabGroupDto;
 import com.sidebeam.external.gitlab.dto.GitLabProjectDto;
 import com.sidebeam.external.gitlab.dto.RepositoryFileDto;
 import com.sidebeam.external.gitlab.util.GitLabApiPagingUtils;
+import io.github.resilience4j.bulkhead.annotation.Bulkhead;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import io.github.resilience4j.retry.annotation.Retry;
+import io.netty.channel.ChannelOption;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpStatusCode;
-import org.springframework.http.ResponseEntity;
 import org.springframework.http.client.reactive.ReactorClientHttpConnector;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -22,10 +27,8 @@ import reactor.core.publisher.Mono;
 import reactor.netty.http.client.HttpClient;
 
 import javax.net.ssl.SSLException;
+import java.time.Duration;
 import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.function.Function;
 
 /**
  * GitLab API와 통신하기 위한 클라이언트 컴포넌트입니다.
@@ -43,7 +46,7 @@ public class GitLabApiClient {
         this.gitLabProperties = gitLabProperties;
         this.apiProperties = apiProperties;
 
-        // SSL 검증을 비활성화한 HttpClient 생성
+        // SSL 검증을 비활성화한 HttpClient 생성 + 타임아웃 구성
         HttpClient httpClient = HttpClient.create()
                 .wiretap(true) // 네트워크 레벨 로깅 활성화
                 .secure(sslSpec -> {
@@ -56,8 +59,9 @@ public class GitLabApiClient {
                     } catch (SSLException e) {
                         throw new RuntimeException(e);
                     }
-                });
-
+                })
+                .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 3000)
+                .responseTimeout(Duration.ofSeconds(5));
 
         this.gitLabWebClient = webClientBuilder
                 .clientConnector(new ReactorClientHttpConnector(httpClient))
@@ -74,6 +78,9 @@ public class GitLabApiClient {
     /**
      * GitLab API를 호출하여 그룹 정보를 가져옵니다.
      */
+    @CircuitBreaker(name = "gitlab", fallbackMethod = "fallbackGetGroup")
+    @Retry(name = "gitlab")
+    @Bulkhead(name = "gitlab")
     public Mono<GitLabGroupDto> getGroup(String groupId) {
         log.debug("Fetching group info for groupId: {}", groupId);
 
@@ -86,12 +93,20 @@ public class GitLabApiClient {
                 .doOnError(error -> log.error("Error fetching group info for groupId: {}", groupId, error));
     }
 
+    private Mono<GitLabGroupDto> fallbackGetGroup(String groupId, Throwable t) {
+        log.error("[CB][Fallback] getGroup failed for groupId: {}", groupId, t);
+        return Mono.error(new TechnicalException(ErrorCode.GITLAB_API_ERROR, "Failed to fetch group info", t));
+    }
+
     /**
      * GitLab API를 호출하여 하위 그룹 목록을 가져옵니다.
      *
      * @param groupId 상위 그룹 ID
      * @return 하위 그룹 목록
      */
+    @CircuitBreaker(name = "gitlab", fallbackMethod = "fallbackGetSubgroups")
+    @Retry(name = "gitlab")
+    @Bulkhead(name = "gitlab")
     public Flux<GitLabGroupDto> getSubgroups(String groupId) {
         log.debug("Fetching subgroups for groupId: {}", groupId);
 
@@ -107,10 +122,18 @@ public class GitLabApiClient {
                 .doOnError(error -> log.error("Error fetching subgroups for groupId: {}", groupId, error));
     }
 
+    private Flux<GitLabGroupDto> fallbackGetSubgroups(String groupId, Throwable t) {
+        log.error("[CB][Fallback] getSubgroups failed for groupId: {}", groupId, t);
+        return Flux.error(new TechnicalException(ErrorCode.GITLAB_API_ERROR, "Failed to fetch subgroups", t));
+    }
+
     /**
      * GitLab API를 호출하여 그룹 내 프로젝트 목록을 가져옵니다.
      * 이 메서드는 하위 호환성을 위해 유지됩니다.
      */
+    @CircuitBreaker(name = "gitlab", fallbackMethod = "fallbackGetProjects")
+    @Retry(name = "gitlab")
+    @Bulkhead(name = "gitlab")
     public Flux<GitLabProjectDto> getProjectIdListByGroupId(String groupId) {
 
         log.debug("Fetching projects for groupId: {}", groupId);
@@ -131,9 +154,17 @@ public class GitLabApiClient {
                 .doOnError(error -> log.error("전체 프로젝트 조회 실패 - groupId: {}", groupId, error)); // flatten List<GitLabProjectDto> → GitLabProjectDto
     }
 
+    private Flux<GitLabProjectDto> fallbackGetProjects(String groupId, Throwable t) {
+        log.error("[CB][Fallback] getProjectIdListByGroupId failed for groupId: {}", groupId, t);
+        return Flux.error(new TechnicalException(ErrorCode.GITLAB_API_ERROR, "Failed to fetch projects", t));
+    }
+
     /**
      * GitLab API를 호출하여 프로젝트 내 파일 목록을 가져옵니다.
      */
+    @CircuitBreaker(name = "gitlab", fallbackMethod = "fallbackGetRepositoryFiles")
+    @Retry(name = "gitlab")
+    @Bulkhead(name = "gitlab")
     public Flux<GitLabFileDto> getRepositoryFiles(String projectId, String path) {
         log.debug("Fetching repository files for projectId: {}, path: {}", projectId, path);
 
@@ -160,9 +191,17 @@ public class GitLabApiClient {
                 .doOnError(error -> log.error("Error fetching repository files for projectId: {}, path: {}", projectId, path, error));
     }
 
+    private Flux<GitLabFileDto> fallbackGetRepositoryFiles(String projectId, String path, Throwable t) {
+        log.error("[CB][Fallback] getRepositoryFiles failed for projectId: {}, path: {}", projectId, path, t);
+        return Flux.error(new TechnicalException(ErrorCode.GITLAB_API_ERROR, "Failed to fetch repository files", t));
+    }
+
     /**
      * GitLab API를 호출하여 파일 내용을 가져옵니다.
      */
+    @CircuitBreaker(name = "gitlab", fallbackMethod = "fallbackGetFileContent")
+    @Retry(name = "gitlab")
+    @Bulkhead(name = "gitlab")
     public Mono<String> getFileContent(String projectId, String filePath) {
         log.debug("Fetching file content for projectId: {}, filePath: {}", projectId, filePath);
 
@@ -176,5 +215,10 @@ public class GitLabApiClient {
                 .bodyToMono(String.class)
                 .doOnSuccess(response -> log.debug("Successfully fetched file content for projectId: {}, filePath: {}", projectId, filePath))
                 .doOnError(error -> log.error("Error fetching file content for projectId: {}, filePath: {}", projectId, filePath, error));
+    }
+
+    private Mono<String> fallbackGetFileContent(String projectId, String filePath, Throwable t) {
+        log.error("[CB][Fallback] getFileContent failed for projectId: {}, filePath: {}", projectId, filePath, t);
+        return Mono.error(new TechnicalException(ErrorCode.GITLAB_API_ERROR, "Failed to fetch file content", t));
     }
 }
