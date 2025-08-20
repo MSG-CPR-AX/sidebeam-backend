@@ -48,7 +48,6 @@ public class GitLabApiClient {
 
         // SSL 검증을 비활성화한 HttpClient 생성 + 타임아웃 구성
         HttpClient httpClient = HttpClient.create()
-                .wiretap(true) // 네트워크 레벨 로깅 활성화
                 .secure(sslSpec -> {
                     try {
                         sslSpec.sslContext(

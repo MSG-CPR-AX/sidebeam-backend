@@ -16,7 +16,7 @@ import java.util.*;
  * 파일 목록 조회, 파일 내용 조회, 디렉토리 탐색 등의 기능을 제공합니다.
  *
  * File List -> Defined Class
- * File Contents -> Law 타입
+ * File Contents -> raw 타입
  */
 @Slf4j
 @Component
@@ -28,11 +28,20 @@ public class GitLabStorageFileRetriever {
 
     /**
      * 프로젝트에서 YAML 파일 목록을 가져옵니다.
+     * 기존 오타 메서드와의 하위 호환을 위해 유지됩니다.
      */
+    @Deprecated(since = "1.0", forRemoval = false)
     public Mono<ProjectFilesDto> retrieverProjectFiles(GitLabProjectDto project) {
+        return retrieveProjectFilePaths(project);
+    }
+
+    /**
+     * 프로젝트에서 YAML 파일 목록을 가져옵니다. (명확한 메서드명)
+     */
+    public Mono<ProjectFilesDto> retrieveProjectFilePaths(GitLabProjectDto project) {
         String projectId = project.id().toString();
         String projectPath = project.pathWithNamespace();
-        
+
         log.debug("프로젝트 {}의 파일 목록 가져오기", projectPath);
 
         return gitLabApiClient.getRepositoryFiles(projectId, projectPath)
@@ -61,8 +70,12 @@ public class GitLabStorageFileRetriever {
      */
     public Mono<AllFilesContentDto> retrieveFileContents(List<ProjectFilesDto> projectFilesList) {
 
+        int projectCount = projectFilesList.size();
+        int totalFiles = projectFilesList.stream().mapToInt(p -> p.filePaths().size()).sum();
+        log.info("파일 내용 조회 시작: 프로젝트 {}개, 파일 {}개 대상", projectCount, totalFiles);
+
         List<Mono<FileContentDto>> fileContentMonos = new ArrayList<>();
-        log.debug("File List : {}", projectFilesList);
+        log.debug("파일 목록 상세: {}", projectFilesList);
 
         for (ProjectFilesDto projectFiles : projectFilesList) {
             String projectId = projectFiles.projectId();
@@ -81,6 +94,7 @@ public class GitLabStorageFileRetriever {
 
         return Flux.concat(fileContentMonos)
                 .collectList()
+                .doOnSuccess(list -> log.info("파일 내용 조회 완료: 총 {}개 파일 처리", list.size()))
                 .map(AllFilesContentDto::new);
     }
 
