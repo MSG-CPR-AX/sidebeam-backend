@@ -39,6 +39,7 @@ public class GitLabServiceImpl implements GitLabService {
                 .block();
     }
 
+    @SuppressWarnings("deprecation")
     private Mono<AllFilesContentDto> retrieveAndCacheAllYamlFiles() {
         log.debug("GitLab API를 통해 모든 YAML 파일 가져오기");
 
