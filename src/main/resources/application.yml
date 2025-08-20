@@ -131,3 +131,13 @@ security:
     value: ${SECURITY_API_KEY_VALUE:}
     # 추가 제외 패턴(있다면 콤마로 구분)
     exclude-patterns: ${SECURITY_API_KEY_EXCLUDES:}
+
+# HTTP Client 성능/확장성 설정 (Reactor Netty 기반 WebClient)
+http:
+  client:
+    connect-timeout-millis: 3000
+    response-timeout-millis: 5000
+    pool-max-connections: 100
+    pending-acquire-timeout-millis: 2000
+    pool-max-idle-time: 30s
+    pool-max-life-time: 5m
