@@ -8,26 +8,18 @@ import com.sidebeam.external.gitlab.config.property.GitLabProperties;
 import com.sidebeam.external.gitlab.dto.GitLabFileDto;
 import com.sidebeam.external.gitlab.dto.GitLabGroupDto;
 import com.sidebeam.external.gitlab.dto.GitLabProjectDto;
-import com.sidebeam.external.gitlab.dto.RepositoryFileDto;
 import com.sidebeam.external.gitlab.util.GitLabApiPagingUtils;
 import io.github.resilience4j.bulkhead.annotation.Bulkhead;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import io.github.resilience4j.retry.annotation.Retry;
-import io.netty.channel.ChannelOption;
-import io.netty.handler.ssl.SslContextBuilder;
-import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpStatusCode;
-import org.springframework.http.client.reactive.ReactorClientHttpConnector;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-import reactor.netty.http.client.HttpClient;
 
-import javax.net.ssl.SSLException;
-import java.time.Duration;
 import java.util.List;
 
 /**
@@ -46,24 +38,8 @@ public class GitLabApiClient {
         this.gitLabProperties = gitLabProperties;
         this.apiProperties = apiProperties;
 
-        // SSL 검증을 비활성화한 HttpClient 생성 + 타임아웃 구성
-        HttpClient httpClient = HttpClient.create()
-                .secure(sslSpec -> {
-                    try {
-                        sslSpec.sslContext(
-                                SslContextBuilder.forClient()
-                                        .trustManager(InsecureTrustManagerFactory.INSTANCE)
-                                        .build()
-                        );
-                    } catch (SSLException e) {
-                        throw new RuntimeException(e);
-                    }
-                })
-                .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 3000)
-                .responseTimeout(Duration.ofSeconds(5));
-
+        // 공통 WebClient 설정(WebClientConfig) 사용: 타임아웃/커넥션 풀/SSL 검증은 글로벌 설정에 따름
         this.gitLabWebClient = webClientBuilder
-                .clientConnector(new ReactorClientHttpConnector(httpClient))
                 .baseUrl(gitLabProperties.getApiUrl())
                 .defaultHeader("PRIVATE-TOKEN", gitLabProperties.getAccessToken())
                 .filter((request, next) -> {

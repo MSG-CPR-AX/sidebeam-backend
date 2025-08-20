@@ -54,7 +54,8 @@ public class CacheConfig {
         SimpleCacheManager cacheManager = new SimpleCacheManager();
         cacheManager.setCaches(Arrays.asList(
                 new ConcurrentMapCache(BOOKMARKS_CACHE),
-                new ConcurrentMapCache(CATEGORY_TREE_CACHE)
+                new ConcurrentMapCache(CATEGORY_TREE_CACHE),
+                new ConcurrentMapCache("gitlabDataCache")
         ));
         return cacheManager;
     }
