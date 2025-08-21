@@ -68,7 +68,7 @@ public class TestController {
     @Operation(summary = "Test ApiResponse", description = "Returns an already wrapped ApiResponse that should not be re-wrapped")
     public ApiResponse<String> getApiResponse() {
         log.info("REST request to get ApiResponse");
-        return ApiResponse.success("Already wrapped response");
+        return ApiResponse.ok("Already wrapped response");
     }
 
     /**

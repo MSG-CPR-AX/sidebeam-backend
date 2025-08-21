@@ -5,7 +5,7 @@ import com.sidebeam.common.cache.component.SpringCacheManager;
 import com.sidebeam.external.gitlab.config.property.GitLabProperties;
 import com.sidebeam.external.gitlab.dto.AllFilesContentDto;
 import com.sidebeam.external.gitlab.dto.FileContentDto;
-import com.sidebeam.external.gitlab.dto.ProjectFilesDto;
+import com.sidebeam.external.gitlab.dto.ProjectFilePathsDto;
 import com.sidebeam.external.gitlab.service.GitLabApiClient;
 import com.sidebeam.external.gitlab.service.GitLabStorageFileRetriever;
 import org.junit.jupiter.api.DisplayName;
@@ -17,7 +17,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-import java.util.ArrayList;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -101,8 +100,8 @@ class GitLabServiceImplTest {
         );
         given(gitLabApiClient.getProjectIdListByGroupId("123")).willReturn(Flux.just(project));
 
-        ProjectFilesDto projectFiles = new ProjectFilesDto("1", List.of("bookmarks.yml"));
-        given(fileRetriever.retrieverProjectFiles(any())).willReturn(Mono.just(projectFiles));
+        ProjectFilePathsDto projectFiles = new ProjectFilePathsDto("1", List.of("bookmarks.yml"));
+        given(fileRetriever.retrieveProjectFilePaths(any())).willReturn(Mono.just(projectFiles));
 
         AllFilesContentDto aggregated = new AllFilesContentDto(List.of(new FileContentDto("bookmarks.yml", "name: Test\nurl: https://example.com")));
         given(fileRetriever.retrieveFileContents(any())).willReturn(Mono.just(aggregated));
@@ -115,7 +114,7 @@ class GitLabServiceImplTest {
         assertThat(result.fileContents()).hasSize(1);
         assertThat(result.fileContents().get(0).filePath()).isEqualTo("bookmarks.yml");
         verify(gitLabApiClient).getProjectIdListByGroupId("123");
-        verify(fileRetriever).retrieverProjectFiles(any());
+        verify(fileRetriever).retrieveProjectFilePaths(any());
         verify(fileRetriever).retrieveFileContents(any());
         verify(springCacheManager).cacheData(aggregated);
     }
@@ -139,10 +138,10 @@ class GitLabServiceImplTest {
         );
         given(gitLabApiClient.getProjectIdListByGroupId("123")).willReturn(Flux.just(project1, project2));
 
-        ProjectFilesDto projectFiles1 = new ProjectFilesDto("1", List.of("file1.yml"));
-        ProjectFilesDto projectFiles2 = new ProjectFilesDto("2", List.of("file2.yml"));
-        given(fileRetriever.retrieverProjectFiles(project1)).willReturn(Mono.just(projectFiles1));
-        given(fileRetriever.retrieverProjectFiles(project2)).willReturn(Mono.just(projectFiles2));
+        ProjectFilePathsDto projectFiles1 = new ProjectFilePathsDto("1", List.of("file1.yml"));
+        ProjectFilePathsDto projectFiles2 = new ProjectFilePathsDto("2", List.of("file2.yml"));
+        given(fileRetriever.retrieveProjectFilePaths(project1)).willReturn(Mono.just(projectFiles1));
+        given(fileRetriever.retrieveProjectFilePaths(project2)).willReturn(Mono.just(projectFiles2));
 
         AllFilesContentDto aggregated = new AllFilesContentDto(List.of(
                 new FileContentDto("file1.yml", "content1"),
@@ -157,8 +156,8 @@ class GitLabServiceImplTest {
         // Then
         assertThat(result.fileContents()).hasSize(2);
         verify(gitLabApiClient).getProjectIdListByGroupId("123");
-        verify(fileRetriever).retrieverProjectFiles(project1);
-        verify(fileRetriever).retrieverProjectFiles(project2);
+        verify(fileRetriever).retrieveProjectFilePaths(project1);
+        verify(fileRetriever).retrieveProjectFilePaths(project2);
         verify(fileRetriever).retrieveFileContents(any());
         verify(springCacheManager).cacheData(aggregated);
     }

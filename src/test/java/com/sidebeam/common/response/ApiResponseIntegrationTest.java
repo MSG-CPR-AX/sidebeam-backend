@@ -1,9 +1,11 @@
 package com.sidebeam.common.response;
 
 import com.sidebeam.common.controller.TestController;
+import com.sidebeam.common.rest.response.GlobalResponseBodyAdvice;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -15,6 +17,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  */
 @ActiveProfiles("test")
 @WebMvcTest(TestController.class)
+@Import(GlobalResponseBodyAdvice.class)
 class ApiResponseIntegrationTest {
 
     @Autowired
@@ -36,8 +39,6 @@ class ApiResponseIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(content().contentType("application/json"))
                 .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.code").value("200"))
-                .andExpect(jsonPath("$.message").value("요청이 성공적으로 처리되었습니다."))
                 .andExpect(jsonPath("$.data.id").value(1))
                 .andExpect(jsonPath("$.data.name").value("Test Object"))
                 .andExpect(jsonPath("$.data.active").value(true));
@@ -50,8 +51,8 @@ class ApiResponseIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(content().contentType("application/json"))
                 .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.code").value("200"))
-                .andExpect(jsonPath("$.message").value("요청이 성공적으로 처리되었습니다."))
-                .andExpect(jsonPath("$.data").value("Already wrapped response"));
+                .andExpect(jsonPath("$.data").value("Already wrapped response"))
+                .andExpect(jsonPath("$.error").doesNotExist())
+                .andExpect(jsonPath("$.timestamp").exists());
     }
 }
