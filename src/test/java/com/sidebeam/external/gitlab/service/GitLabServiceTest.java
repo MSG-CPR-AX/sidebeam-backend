@@ -5,7 +5,7 @@ import com.sidebeam.external.gitlab.config.property.GitLabProperties;
 import com.sidebeam.external.gitlab.dto.GitLabProjectDto;
 import com.sidebeam.external.gitlab.dto.AllFilesContentDto;
 import com.sidebeam.external.gitlab.dto.FileContentDto;
-import com.sidebeam.external.gitlab.dto.ProjectFilesDto;
+import com.sidebeam.external.gitlab.dto.ProjectFilePathsDto;
 import com.sidebeam.bookmark.service.GitLabService;
 import com.sidebeam.bookmark.service.impl.GitLabServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
@@ -93,8 +93,8 @@ class GitLabServiceTest {
         when(gitLabApiClient.getProjectIdListByGroupId("root-group-id")).thenReturn(Flux.just(project));
 
         // Mock file retriever methods
-        ProjectFilesDto projectFiles = new ProjectFilesDto("123", List.of("file1.yml", "dir/file2.yml"));
-        when(gitLabStorageFileRetriever.retrieverProjectFiles(project))
+        ProjectFilePathsDto projectFiles = new ProjectFilePathsDto("123", List.of("file1.yml", "dir/file2.yml"));
+        when(gitLabStorageFileRetriever.retrieveProjectFilePaths(project))
                 .thenReturn(Mono.just(projectFiles));
 
         // Mock file contents
@@ -120,7 +120,7 @@ class GitLabServiceTest {
 
         verify(springCacheManager, times(1)).getCachedData(AllFilesContentDto.class);
         verify(gitLabApiClient, times(1)).getProjectIdListByGroupId("root-group-id");
-        verify(gitLabStorageFileRetriever, times(1)).retrieverProjectFiles(project);
+        verify(gitLabStorageFileRetriever, times(1)).retrieveProjectFilePaths(project);
         verify(gitLabStorageFileRetriever, times(1)).retrieveFileContents(List.of(projectFiles));
         verify(springCacheManager, times(1)).cacheData(resultDto);
     }

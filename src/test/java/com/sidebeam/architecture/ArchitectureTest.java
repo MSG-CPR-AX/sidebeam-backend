@@ -7,7 +7,7 @@ import org.junit.jupiter.api.Test;
 
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 
-public class ArchitectureTest {
+class ArchitectureTest {
 
     private JavaClasses imported() {
         return new ClassFileImporter().importPackages("com.sidebeam");

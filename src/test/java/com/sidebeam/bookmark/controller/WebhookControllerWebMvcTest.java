@@ -2,22 +2,19 @@ package com.sidebeam.bookmark.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sidebeam.bookmark.service.BookmarkService;
-import com.sidebeam.common.rest.response.GlobalResponseBodyAdvice;
 import com.sidebeam.external.gitlab.config.property.WebhookProperties;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.Map;
 
-import static org.hamcrest.Matchers.*;
-import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -31,7 +28,7 @@ class WebhookControllerWebMvcTest {
     @Autowired
     MockMvc mockMvc;
 
-    @MockBean
+    @MockitoBean
     BookmarkService bookmarkService;
 
     @Autowired
@@ -50,8 +47,7 @@ class WebhookControllerWebMvcTest {
                         .header("X-Gitlab-Token", "wrong"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$.code").value("UNAUTHORIZED"))
-                .andExpect(jsonPath("$.status").value(401));
+                .andExpect(jsonPath("$.error.code").value("UNAUTHORIZED"));
 
         verifyNoInteractions(bookmarkService);
     }
@@ -68,7 +64,7 @@ class WebhookControllerWebMvcTest {
                         .content(body))
                 .andExpect(status().isUnauthorized())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$.code").value("UNAUTHORIZED"));
+                .andExpect(jsonPath("$.error.code").value("UNAUTHORIZED"));
 
         verifyNoInteractions(bookmarkService);
     }
@@ -105,8 +101,7 @@ class WebhookControllerWebMvcTest {
                         .header("X-Gitlab-Token", "secret"))
                 .andExpect(status().isInternalServerError())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$.code").value("INTERNAL_SERVER_ERROR"))
-                .andExpect(jsonPath("$.status").value(500));
+                .andExpect(jsonPath("$.error.code").value("INTERNAL_SERVER_ERROR"));
 
         verify(bookmarkService).refreshBookmarks();
     }
