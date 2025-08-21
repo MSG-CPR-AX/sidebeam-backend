@@ -1,18 +1,33 @@
 plugins {
     id("java")
-    id("org.springframework.boot") version "3.5.0"
+    id("org.springframework.boot") version "3.5.4"
     id("io.spring.dependency-management") version "1.1.7"
 }
 
 group = "com.sidebeam"
 version = "1.0-SNAPSHOT"
-java.sourceCompatibility = JavaVersion.VERSION_21
+java.sourceCompatibility = JavaVersion.VERSION_24
 
 repositories {
     mavenCentral()
 }
 
+// 공통 버전 상수 추출
+val jasyptVersion = "3.0.5"
+val resilience4jBomVersion = "2.3.0"
+val gitlab4jVersion = "6.0.0-rc.10"
+val springdocVersion = "2.8.9"
+val mapstructVersion = "1.6.3"
+val jsonOrgVersion = "20250517"
+val archunitVersion = "1.4.1"
+val nettyDnsNativeVersion = "4.1.76.Final"
+val jacksonBomVersion = "2.17.2"
+val jaxrsVersion = "4.0.0"
+val jsonSchemaVersion = "1.5.1"
+val junitBomVersion = "5.13.4"
+
 dependencies {
+    // Implementation
     // Spring Boot
     implementation("org.springframework.boot:spring-boot-starter-web")
     implementation("org.springframework.boot:spring-boot-starter-cache")
@@ -20,57 +35,61 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-webflux")
     implementation("org.springframework.boot:spring-boot-starter-security")
     implementation("org.springframework.boot:spring-boot-starter-aop")
-    
-    // Jasypt for property encryption (local profile only)
-    implementation("com.github.ulisesbocchio:jasypt-spring-boot-starter:3.0.5")
 
-    // Spring Retry (legacy)
+    // Core/Infra
     implementation("org.springframework.retry:spring-retry")
+    implementation("com.github.ulisesbocchio:jasypt-spring-boot-starter:$jasyptVersion")
 
-    // Resilience4j (resiliency: circuit breaker, retry, bulkhead, reactor support)
-    implementation("io.github.resilience4j:resilience4j-spring-boot3:2.3.0")
-    implementation("io.github.resilience4j:resilience4j-reactor:2.3.0")
+    // Resilience4j
+    implementation(platform("io.github.resilience4j:resilience4j-bom:$resilience4jBomVersion"))
+    implementation("io.github.resilience4j:resilience4j-spring-boot3")
+    implementation("io.github.resilience4j:resilience4j-reactor")
 
-    // YAML Processing
+    // Jackson / YAML
+    implementation(platform("com.fasterxml.jackson:jackson-bom:$jacksonBomVersion"))
     implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-yaml")
     implementation("com.fasterxml.jackson.core:jackson-databind")
 
-    // GitLab API
-    implementation("org.gitlab4j:gitlab4j-api:6.0.0-rc.10")
-    implementation("jakarta.ws.rs:jakarta.ws.rs-api:4.0.0")
+    // GitLab / JAX-RS
+    implementation("org.gitlab4j:gitlab4j-api:$gitlab4jVersion")
+    implementation("jakarta.ws.rs:jakarta.ws.rs-api:$jaxrsVersion")
 
     // JSON Schema Validation
-    implementation("org.everit.json:org.everit.json.schema:1.5.1")
-    implementation("org.json:json:20250517")
-
-    // Lombok
-    compileOnly("org.projectlombok:lombok")
-    annotationProcessor("org.projectlombok:lombok")
+    implementation("org.everit.json:org.everit.json.schema:$jsonSchemaVersion")
+    implementation("org.json:json:$jsonOrgVersion")
 
     // Mapstruct
-    implementation("org.mapstruct:mapstruct:1.6.3")
-    annotationProcessor("org.mapstruct:mapstruct-processor:1.6.3")
+    implementation("org.mapstruct:mapstruct:$mapstructVersion")
 
     // API Documentation
-    implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.9")
+    implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:$springdocVersion")
 
-    // Testing
-    testImplementation("org.springframework.boot:spring-boot-starter-test")
-    testImplementation(platform("org.junit:junit-bom:5.13.4"))
-    testImplementation("org.junit.jupiter:junit-jupiter")
-    testImplementation("com.tngtech.archunit:archunit-junit5:1.3.0")
+    // CompileOnly
+    compileOnly("org.projectlombok:lombok")
 
-    // Lombok for tests
-    testCompileOnly("org.projectlombok:lombok")
-    testAnnotationProcessor("org.projectlombok:lombok")
+    // Annotation Processor
+    annotationProcessor("org.projectlombok:lombok")
+    annotationProcessor("org.mapstruct:mapstruct-processor:$mapstructVersion")
 
-
+    // RuntimeOnly
     // macOS ARM64 전용 DNS 리졸버 (로컬 개발환경용)
     if (System.getProperty("os.name").lowercase().startsWith("mac") &&
         System.getProperty("os.arch") == "aarch64" &&
         !System.getenv("CI").toBoolean()) { // CI 환경이 아닌 경우에만
-        runtimeOnly("io.netty:netty-resolver-dns-native-macos:4.1.76.Final:osx-aarch_64")
+        runtimeOnly("io.netty:netty-resolver-dns-native-macos:$nettyDnsNativeVersion:osx-aarch_64")
     }
+
+    // TestImplementation
+    testImplementation("org.springframework.boot:spring-boot-starter-test")
+    testImplementation(platform("org.junit:junit-bom:$junitBomVersion"))
+    testImplementation("org.junit.jupiter:junit-jupiter")
+    testImplementation("com.tngtech.archunit:archunit-junit5:$archunitVersion")
+
+    // TestCompileOnly
+    testCompileOnly("org.projectlombok:lombok")
+
+    // TestAnnotationProcessor
+    testAnnotationProcessor("org.projectlombok:lombok")
 }
 
 tasks.test {
