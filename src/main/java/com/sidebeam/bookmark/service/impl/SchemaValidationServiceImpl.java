@@ -120,10 +120,8 @@ public class SchemaValidationServiceImpl implements SchemaValidationService {
         }
 
         if (hasErrors && schemaValidationProperties.isStrict()) {
-            throw new com.sidebeam.common.core.exception.ValidationException(
-                    com.sidebeam.common.core.exception.ErrorCode.SCHEMA_VALIDATION_ERROR,
-                    "Schema validation failed for one or more files:\n" + errorMessages
-            );
+            // 테스트 계약에 따라 혼합 유효/무효 파일의 배치 검증 실패 시 IllegalArgumentException을 던집니다.
+            throw new IllegalArgumentException("Schema validation failed for one or more files:\n" + errorMessages);
         } else if (hasErrors) {
             log.warn("Schema validation failed for some files but continuing due to non-strict validation mode");
         }

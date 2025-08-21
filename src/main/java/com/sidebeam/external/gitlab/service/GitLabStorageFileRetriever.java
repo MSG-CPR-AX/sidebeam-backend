@@ -27,18 +27,9 @@ public class GitLabStorageFileRetriever {
     private final GitLabApiClient gitLabApiClient;
 
     /**
-     * 프로젝트에서 YAML 파일 목록을 가져옵니다.
-     * 기존 오타 메서드와의 하위 호환을 위해 유지됩니다.
-     */
-    @Deprecated(since = "1.0", forRemoval = false)
-    public Mono<ProjectFilesDto> retrieverProjectFiles(GitLabProjectDto project) {
-        return retrieveProjectFilePaths(project);
-    }
-
-    /**
      * 프로젝트에서 YAML 파일 목록을 가져옵니다. (명확한 메서드명)
      */
-    public Mono<ProjectFilesDto> retrieveProjectFilePaths(GitLabProjectDto project) {
+    public Mono<ProjectFilePathsDto> retrieveProjectFilePaths(GitLabProjectDto project) {
         String projectId = project.id().toString();
         String projectPath = project.pathWithNamespace();
 
@@ -53,7 +44,7 @@ public class GitLabStorageFileRetriever {
                 .flatMap(fileDto -> isDirectory(fileDto.type()) ?
                                 this.retrieveFilesInDirectory(projectId, fileDto.path()) : Flux.just(fileDto.path()))
                 .collectList()
-                .map(filePaths -> new ProjectFilesDto(projectId, filePaths));
+                .map(filePaths -> new ProjectFilePathsDto(projectId, filePaths));
     }
 
     /**
@@ -68,7 +59,7 @@ public class GitLabStorageFileRetriever {
     /**
      * 각 프로젝트의 파일 내용을 가져옵니다.
      */
-    public Mono<AllFilesContentDto> retrieveFileContents(List<ProjectFilesDto> projectFilesList) {
+    public Mono<AllFilesContentDto> retrieveFileContents(List<ProjectFilePathsDto> projectFilesList) {
 
         int projectCount = projectFilesList.size();
         int totalFiles = projectFilesList.stream().mapToInt(p -> p.filePaths().size()).sum();
@@ -77,7 +68,7 @@ public class GitLabStorageFileRetriever {
         List<Mono<FileContentDto>> fileContentMonos = new ArrayList<>();
         log.debug("파일 목록 상세: {}", projectFilesList);
 
-        for (ProjectFilesDto projectFiles : projectFilesList) {
+        for (ProjectFilePathsDto projectFiles : projectFilesList) {
             String projectId = projectFiles.projectId();
             List<String> filePaths = projectFiles.filePaths();
 

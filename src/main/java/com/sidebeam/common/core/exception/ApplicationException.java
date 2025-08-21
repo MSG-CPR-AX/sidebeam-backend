@@ -14,84 +14,39 @@ import lombok.Getter;
 @Getter
 public class ApplicationException extends RuntimeException {
 
-    /**
-     * -- GETTER --
-     *  오류 코드를 반환합니다.
-     *
-     * @return ErrorCode
-     */
     private final ErrorCode errorCode;
 
-    /**
-     * ErrorCode를 사용하여 BusinessException을 생성합니다.
-     * 
-     * @param errorCode 오류 코드
-     */
     public ApplicationException(ErrorCode errorCode) {
         super(errorCode.getMessage());
         this.errorCode = errorCode;
     }
 
-    /**
-     * ErrorCode와 추가 메시지를 사용하여 BusinessException을 생성합니다.
-     * 
-     * @param errorCode 오류 코드
-     * @param message 추가 오류 메시지
-     */
     public ApplicationException(ErrorCode errorCode, String message) {
         super(message);
         this.errorCode = errorCode;
     }
 
-    /**
-     * ErrorCode와 원인 예외를 사용하여 BusinessException을 생성합니다.
-     * 
-     * @param errorCode 오류 코드
-     * @param cause 원인 예외
-     */
     public ApplicationException(ErrorCode errorCode, Throwable cause) {
         super(errorCode.getMessage(), cause);
         this.errorCode = errorCode;
     }
 
-    /**
-     * ErrorCode, 추가 메시지, 원인 예외를 사용하여 BusinessException을 생성합니다.
-     * 
-     * @param errorCode 오류 코드
-     * @param message 추가 오류 메시지
-     * @param cause 원인 예외
-     */
     public ApplicationException(ErrorCode errorCode, String message, Throwable cause) {
         super(message, cause);
         this.errorCode = errorCode;
     }
 
-    /**
-     * 기존 WaffulException과의 호환성을 위한 생성자
-     * 
-     * @param message 오류 메시지
-     */
+
     public ApplicationException(String message) {
         super(message);
         this.errorCode = ErrorCode.INTERNAL_SERVER_ERROR;
     }
 
-    /**
-     * 기존 WaffulException과의 호환성을 위한 생성자
-     * 
-     * @param cause 원인 예외
-     */
     public ApplicationException(Throwable cause) {
         super(cause);
         this.errorCode = ErrorCode.INTERNAL_SERVER_ERROR;
     }
 
-    /**
-     * 기존 WaffulException과의 호환성을 위한 생성자
-     * 
-     * @param message 오류 메시지
-     * @param cause 원인 예외
-     */
     public ApplicationException(String message, Throwable cause) {
         super(message, cause);
         this.errorCode = ErrorCode.INTERNAL_SERVER_ERROR;

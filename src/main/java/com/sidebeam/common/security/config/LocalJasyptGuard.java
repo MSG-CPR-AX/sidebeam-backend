@@ -1,4 +1,4 @@
-package com.sidebeam.config.security;
+package com.sidebeam.common.security.config;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

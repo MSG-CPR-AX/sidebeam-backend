@@ -1,9 +1,9 @@
 package com.sidebeam.common.web.filter;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.sidebeam.common.core.config.property.SecurityProperties;
+import com.sidebeam.common.security.config.property.SecurityProperties;
 import com.sidebeam.common.core.exception.ErrorCode;
-import com.sidebeam.common.core.exception.ErrorResponse;
+import com.sidebeam.common.rest.response.ApiResponse;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -82,10 +82,14 @@ public class ApiKeyAuthFilter extends OncePerRequestFilter {
     }
 
     private void writeUnauthorized(HttpServletResponse response, String path, String details) throws IOException {
-        ErrorResponse err = ErrorResponse.of(ErrorCode.UNAUTHORIZED, path, details);
+        var detailMap = java.util.Map.<String, Object>of(
+                "path", path,
+                "hint", details
+        );
+        ApiResponse.ErrorInfo err = ApiResponse.ErrorInfo.of(ErrorCode.UNAUTHORIZED, null, detailMap);
         response.setStatus(ErrorCode.UNAUTHORIZED.getStatus());
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
         response.setCharacterEncoding(StandardCharsets.UTF_8.name());
-        objectMapper.writeValue(response.getWriter(), err);
+        objectMapper.writeValue(response.getWriter(), ApiResponse.error(err));
     }
 }

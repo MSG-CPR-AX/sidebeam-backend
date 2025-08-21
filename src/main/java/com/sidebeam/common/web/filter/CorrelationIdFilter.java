@@ -14,11 +14,11 @@ import java.util.Optional;
 import java.util.UUID;
 
 /**
- * Populates MDC with request-scoped identifiers and propagates them via response headers.
- * - correlationId: preferred for cross-service tracing
- * - requestId: per-request id for this service
+ * 요청 범위 식별자를 MDC에 저장하고 응답 헤더를 통해 전파합니다.
+ * - correlationId: 서비스 간 추적에 권장되는 식별자
+ * - requestId: 이 서비스의 요청 단위 식별자
  *
- * Header names used:
+ * 사용되는 헤더:
  *  - X-Correlation-Id
  *  - X-Request-Id
  */
