@@ -1,8 +1,11 @@
 package com.sidebeam.external.gitlab.dto;
 
+import lombok.Getter;
+
 /**
  * GitLab Repository Tree API에서 사용되는 파일 타입을 정의하는 열거형
  */
+@Getter
 public enum GitLabFileType {
 
     /**
@@ -24,10 +27,6 @@ public enum GitLabFileType {
 
     GitLabFileType(String value) {
         this.value = value;
-    }
-
-    public String getValue() {
-        return value;
     }
 
     /**

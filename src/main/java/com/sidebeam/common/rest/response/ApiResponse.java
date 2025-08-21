@@ -1,117 +1,104 @@
 package com.sidebeam.common.rest.response;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonPropertyOrder;
+import com.sidebeam.common.core.exception.ErrorCode;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.time.Clock;
+import java.time.Instant;
+import java.util.Map;
+
 /**
- * API 응답을 위한 공통 응답 래퍼 클래스입니다.
- * 
- * GitHub의 Spring 기반 오픈소스 프로젝트들에서 널리 사용되는 구조를 기반으로 설계되었습니다.
- * 모든 REST API 응답을 일관된 형태로 반환하여 클라이언트에서 예측 가능한 응답 구조를 제공합니다.
- * 
- * 응답 구조:
- * - success: 요청 성공 여부 (true/false)
- * - code: 응답 코드 (HTTP 상태 코드 또는 비즈니스 코드)
- * - message: 응답 메시지 (성공/실패 메시지)
- * - data: 실제 응답 데이터 (제네릭 타입으로 다양한 데이터 타입 지원)
- * 
- * @param <T> 응답 데이터의 타입
+ * API 공통 응답(안 A형): 성공/실패를 단일 스키마로 반환합니다.
+ * 성공: { success:true, data, error:null, timestamp }
+ * 실패: { success:false, data:null, error:{code,message,details}, timestamp }
  */
 @Getter
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 @JsonInclude(JsonInclude.Include.NON_NULL)
-@Schema(description = "API 공통 응답 형식")
+@JsonPropertyOrder({"success", "data", "error", "timestamp"})
+@Schema(description = "API 공통 응답 형식(단일 스키마)")
 public class ApiResponse<T> {
 
     @Schema(description = "요청 성공 여부", example = "true")
     private Boolean success;
 
-    @Schema(description = "응답 코드", example = "200")
-    private String code;
-
-    @Schema(description = "응답 메시지", example = "요청이 성공적으로 처리되었습니다.")
-    private String message;
-
     @Schema(description = "응답 데이터")
     private T data;
 
-    /**
-     * 성공 응답을 생성합니다.
-     * 
-     * @param data 응답 데이터
-     * @param <T> 데이터 타입
-     * @return 성공 응답 객체
-     */
-    public static <T> ApiResponse<T> success(T data) {
-        return new ApiResponse<>(true, "200", "요청이 성공적으로 처리되었습니다.", data);
-    }
+    @Schema(description = "오류 정보(성공 시 null)")
+    private ErrorInfo error;
+
+    @Schema(description = "UTC ISO-8601(Z) 타임스탬프", example = "2025-01-01T00:00:00Z")
+    private Instant timestamp;
 
     /**
-     * 성공 응답을 생성합니다. (커스텀 메시지)
-     * 
-     * @param data 응답 데이터
-     * @param message 커스텀 메시지
-     * @param <T> 데이터 타입
-     * @return 성공 응답 객체
+     * 오류 상세 정보 - ErrorResponse 대신 인라인 클래스 사용
      */
-    public static <T> ApiResponse<T> success(T data, String message) {
-        return new ApiResponse<>(true, "200", message, data);
+    @Getter
+    @NoArgsConstructor(access = AccessLevel.PRIVATE)
+    @AllArgsConstructor(access = AccessLevel.PRIVATE)
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    @Schema(description = "오류 상세 정보")
+    public static class ErrorInfo {
+        @Schema(description = "오류 코드", example = "VALIDATION_ERROR")
+        private String code;
+
+        @Schema(description = "사람 친화적 메시지", example = "Invalid request")
+        private String message;
+
+        @Schema(description = "추가 상세", example = "{\"fieldErrors\":[{\"field\":\"name\",\"reason\":\"must not be blank\"}]}")
+        private Map<String, Object> details;
+
+        public static ErrorInfo of(ErrorCode errorCode, String message, Map<String, Object> details) {
+            String msg = (message != null && !message.isBlank()) ? message : errorCode.getMessage();
+            return new ErrorInfo(errorCode.name(), msg, details);
+        }
+
+        public static ErrorInfo of(ErrorCode errorCode, Map<String, Object> details) {
+            return of(errorCode, null, details);
+        }
+
+        public static ErrorInfo of(ErrorCode errorCode) {
+            return of(errorCode, null, null);
+        }
     }
 
-    /**
-     * 데이터 없는 성공 응답을 생성합니다.
-     * 
-     * @return 성공 응답 객체
-     */
-    public static ApiResponse<Void> success() {
-        return new ApiResponse<>(true, "200", "요청이 성공적으로 처리되었습니다.", null);
+    // ---------- Factory methods ----------
+
+    public static <T> ApiResponse<T> ok(T data) {
+        return ok(data, Clock.systemUTC());
     }
 
-    /**
-     * 데이터 없는 성공 응답을 생성합니다. (커스텀 메시지)
-     * 
-     * @param message 커스텀 메시지
-     * @return 성공 응답 객체
-     */
-    public static ApiResponse<Void> successWithMessage(String message) {
-        return new ApiResponse<>(true, "200", message, null);
+    public static ApiResponse<Void> ok() {
+        return ok(null, Clock.systemUTC());
     }
 
-    /**
-     * 실패 응답을 생성합니다.
-     * 
-     * @param code 에러 코드
-     * @param message 에러 메시지
-     * @return 실패 응답 객체
-     */
-    public static ApiResponse<Void> failure(String code, String message) {
-        return new ApiResponse<>(false, code, message, null);
+    public static <T> ApiResponse<T> ok(T data, Clock clock) {
+        return new ApiResponse<>(true, data, null, Instant.now(clock));
     }
 
-    /**
-     * 실패 응답을 생성합니다. (데이터 포함)
-     * 
-     * @param code 에러 코드
-     * @param message 에러 메시지
-     * @param data 에러 관련 데이터
-     * @param <T> 데이터 타입
-     * @return 실패 응답 객체
-     */
-    public static <T> ApiResponse<T> failure(String code, String message, T data) {
-        return new ApiResponse<>(false, code, message, data);
+    public static ApiResponse<Void> error(ErrorInfo error) {
+        return error(error, Clock.systemUTC());
+    }
+
+    public static ApiResponse<Void> error(ErrorCode code, String message, Map<String, Object> details) {
+        return error(ErrorInfo.of(code, message, details));
+    }
+
+    public static ApiResponse<Void> error(ErrorInfo error, Clock clock) {
+        return new ApiResponse<>(false, null, error, Instant.now(clock));
     }
 
     /**
      * 이미 ApiResponse로 래핑된 응답인지 확인합니다.
      * ResponseBodyAdvice에서 중복 래핑을 방지하기 위해 사용됩니다.
-     * 
-     * @param obj 확인할 객체
-     * @return ApiResponse 타입이면 true, 아니면 false
      */
     public static boolean isApiResponse(Object obj) {
         return obj instanceof ApiResponse;

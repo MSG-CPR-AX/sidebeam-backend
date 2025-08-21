@@ -53,7 +53,7 @@ public class GitLabServiceImpl implements GitLabService {
                 // 그룹 하위 프로젝트 목록 조회(서브그룹의 프로젝트 포함)
                 .getProjectIdListByGroupId(rootGroupId)
                 // 프로젝트 내부 파일 목록 조회
-                .flatMap(fileRetriever::retrieverProjectFiles)
+                .flatMap(fileRetriever::retrieveProjectFilePaths)
                 .collectList()
                 .flatMap(fileRetriever::retrieveFileContents) // 위임
                 .flatMap(springCacheManager::cacheData);

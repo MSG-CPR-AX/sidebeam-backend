@@ -3,15 +3,24 @@ package com.sidebeam.common.rest.response;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.core.MethodParameter;
 import org.springframework.core.io.Resource;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageConverter;
+import org.springframework.http.converter.StringHttpMessageConverter;
 import org.springframework.http.server.ServerHttpRequest;
 import org.springframework.http.server.ServerHttpResponse;
+import org.springframework.http.server.ServletServerHttpResponse;
+import org.springframework.util.MimeTypeUtils;
+import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseBodyAdvice;
+import org.springframework.web.servlet.mvc.method.annotation.ResponseBodyEmitter;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
 import java.io.InputStream;
 
@@ -40,15 +49,17 @@ public class GlobalResponseBodyAdvice implements ResponseBodyAdvice<Object> {
 
     /**
      * 응답 처리 여부를 결정합니다.
-     * 
-     * @param returnType 컨트롤러 메서드의 반환 타입
-     * @param converterType 사용될 HttpMessageConverter 타입
-     * @return 응답을 처리할지 여부 (true: 처리함, false: 처리하지 않음)
      */
     @Override
-    public boolean supports(MethodParameter returnType, Class<? extends HttpMessageConverter<?>> converterType) {
-        // 이미 ApiResponse로 래핑된 경우 제외
-        if (returnType.getParameterType().equals(ApiResponse.class)) {
+    public boolean supports(MethodParameter returnType, @NotNull Class<? extends HttpMessageConverter<?>> converterType) {
+
+        // 예외 처리기에서 반환되는 응답은 제외
+        if (returnType.hasMethodAnnotation(ExceptionHandler.class)) {
+            return false;
+        }
+
+        // ApiResponse 또는 그 하위 타입은 제외
+        if (ApiResponse.class.isAssignableFrom(returnType.getParameterType())) {
             return false;
         }
 
@@ -57,73 +68,89 @@ public class GlobalResponseBodyAdvice implements ResponseBodyAdvice<Object> {
             return false;
         }
 
-        // String 타입 제외 (Spring의 StringHttpMessageConverter와 충돌 방지)
-        if (String.class.equals(returnType.getParameterType())) {
+        // 스트리밍/이벤트 응답 제외
+        Class<?> pt = returnType.getParameterType();
+        if (byte[].class.equals(pt) || InputStream.class.isAssignableFrom(pt) || Resource.class.isAssignableFrom(pt) ||
+                StreamingResponseBody.class.isAssignableFrom(pt) || ResponseBodyEmitter.class.isAssignableFrom(pt) ||
+                SseEmitter.class.isAssignableFrom(pt)) {
             return false;
         }
 
-        // 바이너리 데이터 타입들 제외
-        return !(byte[].class.equals(returnType.getParameterType()) ||
-                InputStream.class.isAssignableFrom(returnType.getParameterType()) ||
-                Resource.class.isAssignableFrom(returnType.getParameterType()));
+        // String은 기본적으로 제외 (Object 반환 시 런타임 String은 beforeBodyWrite에서 추가 방어)
+        return !String.class.equals(pt);
     }
 
     /**
      * 응답 본문을 ApiResponse로 래핑합니다.
-     * 
-     * @param body 원본 응답 본문
-     * @param returnType 컨트롤러 메서드의 반환 타입
-     * @param selectedContentType 선택된 Content-Type
-     * @param selectedConverterType 선택된 HttpMessageConverter 타입
-     * @param request HTTP 요청 객체
-     * @param response HTTP 응답 객체
-     * @return 래핑된 응답 객체
      */
     @Override
     public Object beforeBodyWrite(Object body, MethodParameter returnType, MediaType selectedContentType,
                                 Class<? extends HttpMessageConverter<?>> selectedConverterType,
                                 ServerHttpRequest request, ServerHttpResponse response) {
 
+        // 204 No Content 또는 HEAD 요청은 본문 생성 금지
+        HttpStatus status = response instanceof ServletServerHttpResponse servletResp ?
+                HttpStatus.resolve(servletResp.getServletResponse().getStatus()) : null;
+
+        boolean noContent = (status == HttpStatus.NO_CONTENT);
+        boolean headMethod = "HEAD".equalsIgnoreCase(request.getMethod().name());
+
+        if (noContent || headMethod) {
+            return body;
+        }
+
         // 이미 ApiResponse로 래핑된 경우 그대로 반환
         if (ApiResponse.isApiResponse(body)) {
             return body;
         }
 
-        // null 응답 처리
-        if (body == null) {
-            return ApiResponse.success();
+// 메시지 컨버터/미디어 타입에 따른 방어 로직
+        boolean jsonLike = MediaType.APPLICATION_JSON.includes(selectedContentType)
+                || MimeTypeUtils.APPLICATION_JSON_VALUE.equals(selectedContentType.toString());
+
+        // String 컨버터가 선택된 경우: 래핑하지 않음 (타입 불일치 방지)
+        if (StringHttpMessageConverter.class.isAssignableFrom(selectedConverterType)) {
+            return body;
         }
 
-        // String 타입 응답 특별 처리
-        if (body instanceof String stringBody) {
-            // JSON 형태의 문자열인지 확인
-            if (isJsonString(stringBody)) {
-                // JSON 문자열은 래핑하지 않고 그대로 반환 (이미 구조화된 응답일 가능성)
-                return body;
+        // null 응답: JSON으로 협상된 경우에만 성공 래핑
+        if (body == null) {
+            return jsonLike ? ApiResponse.ok() : null;
+        }
+
+        // 런타임이 String일 때: JSON 협상이 아니면 래핑 금지
+        if (body instanceof String s) {
+            if (!jsonLike) {
+                return s;   // text/plain 등은 래핑하지 않음
             }
 
-            // 단순 문자열은 ApiResponse로 래핑
-            // String을 직접 JSON으로 변환하지 않고 ApiResponse 객체로 반환
-            return ApiResponse.success(stringBody, "요청이 성공적으로 처리되었습니다.");
+            // 실제 JSON 여부를 안전하게 판단하고 싶다면 파싱 시도
+            if (isParsableJson(s)) {
+                return s; // 이미 구조화된 JSON 문자열로 간주
+            }
+
+            return ApiResponse.ok(s);
         }
 
-        // 일반 객체는 ApiResponse로 래핑
-        return ApiResponse.success(body);
+        // 일반 객체: JSON 협상일 때만 래핑
+        if (jsonLike) {
+            return ApiResponse.ok(body);
+        }
+
+        return body;
+
     }
 
     /**
      * 문자열이 JSON 형태인지 확인합니다.
-     * 
-     * @param str 확인할 문자열
-     * @return JSON 형태이면 true, 아니면 false
      */
-    private boolean isJsonString(String str) {
-        if (str == null || str.trim().isEmpty()) {
+    private boolean isParsableJson(String s) {
+        if (s == null || s.isBlank()) return false;
+        try {
+            objectMapper.readTree(s);
+            return true;
+        } catch (Exception e) {
             return false;
         }
-
-        String trimmed = str.trim();
-        return (trimmed.startsWith("{") && trimmed.endsWith("}")) ||
-               (trimmed.startsWith("[") && trimmed.endsWith("]"));
     }
 }
