@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <!-- Spring Boot 제공 컨버터 등록: clr, wEx -->
+    <conversionRule conversionWord="clr"
+                    class="org.springframework.boot.logging.logback.ColorConverter"/>
+    <conversionRule conversionWord="wEx"
+                    class="org.springframework.boot.logging.logback.WhitespaceThrowableProxyConverter"/>
+    <!-- 선택: 민감정보 마스킹 컨버터 -->
+    <conversionRule conversionWord="mask"
+                    class="com.sidebeam.common.logging.SensitiveDataMaskingConverter"/>
+
+    <!-- 로컬: 컬러 콘솔(단일 라인, 선택적 MDC) -->
+    <springProfile name="local">
+        <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+            <encoder>
+                <!-- ⚠️ 한 줄로 유지하세요. 줄바꿈/들여쓰기 넣지 마세요. -->
+                <pattern>%clr(%d{yyyy-MM-dd HH:mm:ss.SSS}){faint} %highlight(%-5level) %clr(${PID:- }){magenta} %clr([%15.15t]){faint} %clr(%replace(%X{correlationId}){'^(.+)$','[cid:$1]'}){blue} %clr(%replace(%X{requestId}){'^(.+)$','[rid:$1]'}){cyan} %clr(%-36.36logger{36}){green} %clr(:){faint} %mask%wEx%n</pattern>
+            </encoder>
+        </appender>
+
+        <root level="INFO">
+            <appender-ref ref="CONSOLE"/>
+        </root>
+
+        <!-- 필요시 조정 -->
+        <logger name="com.sidebeam" level="DEBUG" additivity="false">
+            <appender-ref ref="CONSOLE"/>
+        </logger>
+        <logger name="org.springframework.web.client" level="DEBUG"/>
+        <logger name="org.springframework.security" level="DEBUG"/>
+        <logger name="io.github.resilience4j" level="INFO"/>
+        <logger name="org.gitlab4j" level="INFO"/>
+        <logger name="org.springframework.boot.actuator" level="WARN"/>
+        <logger name="org.springframework.boot.web.embedded" level="WARN"/>
+        <logger name="org.springframework.boot.actuator.health" level="WARN"/>
+    </springProfile>
+
+    <!-- 비-로컬 프로파일: JSON 콘솔 + 파일 -->
+    <springProfile name="!local">
+        <appender name="JSON" class="ch.qos.logback.core.ConsoleAppender">
+            <encoder class="net.logstash.logback.encoder.LoggingEventCompositeJsonEncoder">
+                <providers>
+                    <timestamp><timeZone>UTC</timeZone></timestamp>
+                    <version/>
+                    <logLevel/>
+                    <message/>
+                    <mdc/>
+                    <loggerName/>
+                    <pattern>
+                        <pattern>{
+                            "service": "sidebar-backend",
+                            "pid": "${PID:-}",
+                            "thread": "%thread"
+                            }</pattern>
+                    </pattern>
+                    <stackTrace/>
+                </providers>
+            </encoder>
+        </appender>
+
+        <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+            <file>logs/application.log</file>
+            <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+                <fileNamePattern>logs/application.%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
+                <maxFileSize>100MB</maxFileSize>
+                <maxHistory>30</maxHistory>
+                <totalSizeCap>10GB</totalSizeCap>
+            </rollingPolicy>
+            <encoder class="net.logstash.logback.encoder.LoggingEventCompositeJsonEncoder">
+                <providers>
+                    <timestamp><timeZone>UTC</timeZone></timestamp>
+                    <version/>
+                    <logLevel/>
+                    <message/>
+                    <mdc/>
+                    <loggerName/>
+                    <pattern>
+                        <pattern>{
+                            "service": "sidebar-backend",
+                            "pid": "${PID:-}",
+                            "thread": "%thread"
+                            }</pattern>
+                    </pattern>
+                    <stackTrace/>
+                </providers>
+            </encoder>
+        </appender>
+
+        <root level="INFO">
+            <appender-ref ref="JSON"/>
+            <appender-ref ref="FILE"/>
+        </root>
+
+        <logger name="com.sidebeam" level="DEBUG" additivity="false">
+            <appender-ref ref="JSON"/>
+            <appender-ref ref="FILE"/>
+        </logger>
+
+        <logger name="org.springframework.web.client" level="DEBUG"/>
+        <logger name="org.springframework.security" level="DEBUG"/>
+        <logger name="io.github.resilience4j" level="INFO"/>
+        <logger name="org.gitlab4j" level="INFO"/>
+        <logger name="org.springframework.boot.actuator" level="WARN"/>
+        <logger name="org.springframework.boot.web.embedded" level="WARN"/>
+        <logger name="org.springframework.boot.actuator.health" level="WARN"/>
+    </springProfile>
+</configuration>

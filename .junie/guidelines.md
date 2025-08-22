@@ -103,8 +103,8 @@ public record ApiResponse<T>(boolean success, T data, ErrorResponse error, Insta
 }
 
 public record ErrorResponse(String code, String message, Map<String, Object> details) {
-  public static ErrorResponse of(String code, String message, Map<String, Object> details) {
-    return new ErrorResponse(code, message, details);
+  public static ErrorResponse of(ErrorCode code, String message, Map<String, Object> details) {
+    return new ErrorResponse(code.name(), message != null ? message : code.getDefaultMessage(), details);
   }
 }
 
@@ -114,7 +114,8 @@ public enum ErrorCode {
   VALIDATION_ERROR(HttpStatus.BAD_REQUEST, "Invalid request"),
   ENTITY_NOT_FOUND(HttpStatus.NOT_FOUND, "Entity not found"),
   CONFLICT(HttpStatus.CONFLICT, "Conflicting state"),
-  BUSINESS_RULE_VIOLATION(HttpStatus.UNPROCESSABLE_ENTITY, "Business rule violated");
+  BUSINESS_RULE_VIOLATION(HttpStatus.UNPROCESSABLE_ENTITY, "Business rule violated"),
+  EXTERNAL_SERVICE_ERROR(HttpStatus.BAD_GATEWAY, "External service error");
   private final HttpStatus status;
   private final String defaultMessage;
 }
@@ -128,13 +129,13 @@ class GlobalExceptionHandler {
     var fieldErrors = ex.getBindingResult().getFieldErrors().stream()
       .map(fe -> Map.of("field", fe.getField(), "reason", fe.getDefaultMessage()))
       .toList();
-    var err = ErrorResponse.of("VALIDATION_ERROR", "Invalid request", Map.of("fieldErrors", fieldErrors));
+    var err = ErrorResponse.of(ErrorCode.VALIDATION_ERROR, null, Map.of("fieldErrors", fieldErrors));
     return ResponseEntity.status(ErrorCode.VALIDATION_ERROR.getStatus()).body(ApiResponse.error(err));
   }
 
   @ExceptionHandler(EntityNotFoundException.class)
   ResponseEntity<ApiResponse<Void>> handleNotFound(EntityNotFoundException ex) {
-    var err = ErrorResponse.of("ENTITY_NOT_FOUND", ex.getMessage(), Map.of());
+    var err = ErrorResponse.of(ErrorCode.ENTITY_NOT_FOUND, ex.getMessage(), Map.of());
     return ResponseEntity.status(ErrorCode.ENTITY_NOT_FOUND.getStatus()).body(ApiResponse.error(err));
   }
 
@@ -357,3 +358,125 @@ class SampleFacade {
   }
 }
 ```
+
+---
+
+## 공통 응답 details 규약
+
+다음 표준 키를 우선 사용한다. 가능한 한 일관된 스키마를 유지한다.
+- fieldErrors: Bean Validation 필드 오류 목록. [{field, reason}]
+- constraint: 위반된 제약 식별자(예: UNIQUE_NAME).
+- entity: 관련 엔티티/리소스 정보(예: {type:"Bookmark", id:123}).
+- correlationId: 요청 상관관계 ID(로그/MDC와 동일).
+- hint: 사용자/개발자 힌트 메시지.
+- external: 외부 연동 오류 컨텍스트({provider, endpoint, httpStatus, responseSnippet}).
+
+예시:
+```json
+{
+  "success": false,
+  "data": null,
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "Invalid request",
+    "details": {
+      "fieldErrors": [{"field":"name","reason":"must not be blank"}],
+      "correlationId": "c-20250101-abcdef"
+    }
+  },
+  "timestamp": "2025-01-01T00:00:00Z"
+}
+```
+
+---
+
+## 로깅/MDC 표준
+
+- 필수 MDC 키: requestId, correlationId, userId, roles, clientIp, userAgent, httpMethod, httpPath, status, latencyMs.
+- 민감정보(비밀번호/토큰/주민번호/카드번호 등) 로그 금지. 필요 시 마스킹(앞 2자리만 노출 등).
+- 응답 헤더에 requestId, correlationId를 반영해 추적 가능성 확보.
+- 서버/로그 시간대: UTC 고정.
+
+---
+
+## API 버저닝·문서화
+
+- 버전 URI: /api/v1 고정. 하위 호환을 우선시하고, 변경 시 v2 신규 도입.
+- Deprecated 정책: 응답 헤더 Deprecation, Sunset 활용(가능 시), 마이그레이션 가이드 제공.
+- 문서화: 기존 OpenAPI(Springdoc 등) 구성 존재 시 유지·갱신. 신규 라이브러리 도입은 금지 원칙을 준수.
+
+---
+
+## REST 세부 규약 강화
+
+- 페이징 파라미터: page(0-base), size(기본 20, 최대 100), sort=field,dir 다중 허용.
+- 페이징 응답: {content, page, size, totalElements, totalPages, sort}를 data에 포함.
+- 안정 정렬: 정렬키 동일 시 id ASC 2차 정렬 권장.
+- PATCH 정책: 전용 Patch DTO 사용, 제공된 필드만 변경(null은 미사용). 불변 필드는 별도 정책 명시.
+- 날짜/시간: UTC, ISO-8601(Z) 고정. 입력/출력/로그 일관.
+- Enum 직렬화: name() 사용 고정. enum 변경 시 호환성 체크리스트 필수 수행.
+- 멱등성: 생성성 POST는 멱등 키 헤더(Idempotency-Key) 수용 고려.
+
+---
+
+## 외부 연동 어댑터 신뢰성
+
+- 타임아웃: connect/read 2–5s 범위 요구사항에 맞게 설정.
+- 재시도: 네트워크 오류/5xx 대상 최대 2회, 지수 백오프(200ms → 400ms → 800ms). 요청 본문이 크거나 비멱등이면 주의.
+- 에러 매핑: ErrorCode.EXTERNAL_SERVICE_ERROR로 변환, details.external에 {provider, endpoint, httpStatus, responseSnippet} 포함(민감정보 제외).
+- 멱등성: 생성 POST는 키 기반 보호(Idempotency-Key) 적용 검토.
+- 구현은 작은 컴포넌트(예: GitLabRetryPolicy)로 캡슐화하고 Facade에서 조합.
+
+---
+
+## JPA 실무 규약 보강
+
+- N+1 방지: fetch join 우선, 필요 시 @EntityGraph 사용. 컬렉션 fetch join + 페이징 금지.
+- 낙관적 락: @Version 사용. OptimisticLockException → ErrorCode.CONFLICT로 매핑.
+- equals/hashCode: 식별자 기반 구현 권장(영속성 전 상태 주의).
+- 연관관계: orphanRemoval/cascade 명확화. 편의 메서드에서 양방향 일관성 유지.
+- DB 제약 ↔ Bean Validation 동기화(@NotNull, @Size 등).
+- 카운트 쿼리 최적화: 복잡한 페이징 조회 시 countQuery 분리 고려.
+
+---
+
+## 트랜잭션 경계 상세
+
+- Facade public 메서드에 @Transactional. 조회는 readOnly = true.
+- 쓰기 흐름 내 읽기 주의(더티 읽기 방지). 필요한 경우 전파(Propagation) 전략 명시.
+- 재시도는 멱등 조건에서만. 외부 이벤트 발행은 트랜잭션 커밋 후(outbox 패턴 권장).
+
+---
+
+## 테스트 전략 심화
+
+- Fixture/TestDataBuilder 사용으로 가독성 향상.
+- 시간 의존성 제거: Clock 주입/추상화로 테스트 안정화.
+- 외부 HTTP 어댑터 테스트: MockRestServiceServer로 성공/타임아웃/5xx/에러 매핑 시나리오 검증.
+- 커버리지 목표(권장): 핵심 컴포넌트·파사드 80%+, 라인 70%+, 브랜치 60%+.
+
+---
+
+## 패키지 네이밍 매핑(사이드바 프로젝트)
+
+- com.sidebeam.api: 컨트롤러/Request-Response DTO
+- com.sidebeam.application: Facade(Service) 계층(@Transactional)
+- com.sidebeam.component: Validator/Mapper/Policy/Enricher 등 작은 컴포넌트
+- com.sidebeam.domain: 엔티티/도메인 서비스/리포지토리 포트
+- com.sidebeam.infrastructure: JPA 어댑터, 외부 클라이언트, 설정
+- GitLab 연동: com.sidebeam.external.gitlab.service, GitLabStorageFileRetriever 등은 infrastructure/adapter로 분류. 포트 인터페이스는 domain 또는 application 경계에 둔다.
+
+---
+
+## 보강된 리뷰 체크리스트(추가)
+
+- [ ] ErrorCode ↔ ErrorResponse 일관성(문자열 코드 직접 사용 금지)
+- [ ] 공통 응답 details 규약(fieldErrors/constraint/entity/correlationId/external) 준수
+- [ ] MDC 필수 키 적용 및 민감정보 마스킹/헤더 전파
+- [ ] API 버저닝·Deprecated 공지·호환성 유지 전략 준수
+- [ ] 페이징 기본/최대/안정 정렬 및 응답 스키마 준수
+- [ ] 날짜/시간 UTC ISO-8601, Enum name 직렬화
+- [ ] 외부 연동 타임아웃/재시도/에러 매핑/멱등성 일관성
+- [ ] JPA 낙관적 락/N+1 방지/연관관계 규약 준수
+- [ ] 트랜잭션 경계 및 도메인 이벤트(outbox) 정책 준수
+- [ ] 테스트: 실패/경계/시간 의존성/외부 어댑터 시나리오 포함, 커버리지 목표 달성

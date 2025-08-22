@@ -52,25 +52,27 @@ public class BookmarkValidator {
         StringBuilder errorMessage = new StringBuilder("중복된 URL이 발견되었습니다:\n");
 
         for (Map.Entry<String, List<Bookmark>> entry : urlMap.entrySet()) {
-            if (entry.getValue().size() > 1) {
-                hasDuplicates = true;
-                errorMessage.append("URL: ").append(entry.getKey()).append("\n");
-                for (Bookmark bookmark : entry.getValue()) {
-                    errorMessage.append("  - ").append(bookmark.getName())
-                            .append(" (").append(bookmark.getSourcePath()).append(")\n");
-                }
+
+            if (entry.getValue().size() <= 1) continue;
+
+            hasDuplicates = true;
+            errorMessage.append("URL: ").append(entry.getKey()).append("\n");
+
+            for (Bookmark bookmark : entry.getValue()) {
+                errorMessage.append("  - ").append(bookmark.getName())
+                        .append(" (").append(bookmark.getSourcePath()).append(")\n");
             }
         }
 
-        if (hasDuplicates) {
-            log.error(errorMessage.toString());
+        if (!hasDuplicates) return;
 
-            // strict 모드에 따라 예외 발생 여부 결정
-            if (validationProperties.getDuplicate().isStrict()) {
-                throw new IllegalStateException("북마크에서 중복된 URL이 발견되었습니다. 자세한 내용은 로그를 확인하세요.");
-            } else {
-                log.warn("중복된 URL이 발견되었지만 strict 모드가 비활성화되어 있어 계속 진행합니다.");
-            }
+        log.error(errorMessage.toString());
+
+        // strict 모드에 따라 예외 발생 여부 결정
+        if (validationProperties.getDuplicate().isStrict()) {
+            throw new IllegalStateException("북마크에서 중복된 URL이 발견되었습니다. 자세한 내용은 로그를 확인하세요.");
+        } else {
+            log.warn("중복된 URL이 발견되었지만 strict 모드가 비활성화되어 있어 계속 진행합니다.");
         }
     }
 }

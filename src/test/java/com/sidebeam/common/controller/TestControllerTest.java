@@ -7,10 +7,13 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.context.annotation.Import;
+import com.sidebeam.common.rest.response.GlobalResponseBodyAdvice;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
  * TestController와 GlobalResponseBodyAdvice의 통합 테스트입니다.
@@ -19,6 +22,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  */
 @ActiveProfiles("test")
 @WebMvcTest(TestController.class)
+@Import(GlobalResponseBodyAdvice.class)
 class TestControllerTest {
 
     @Autowired
@@ -58,8 +62,6 @@ class TestControllerTest {
 
         // JSON 응답이 ApiResponse 구조를 가지는지 확인
         assertTrue(responseBody.contains("\"success\""));
-        assertTrue(responseBody.contains("\"code\""));
-        assertTrue(responseBody.contains("\"message\""));
         assertTrue(responseBody.contains("\"data\""));
         assertTrue(responseBody.contains("Test Object"));
     }
@@ -76,8 +78,6 @@ class TestControllerTest {
 
         // JSON 응답이 ApiResponse 구조를 가지는지 확인
         assertTrue(responseBody.contains("\"success\""));
-        assertTrue(responseBody.contains("\"code\""));
-        assertTrue(responseBody.contains("\"message\""));
         assertTrue(responseBody.contains("\"data\""));
         assertTrue(responseBody.contains("item1"));
         assertTrue(responseBody.contains("item2"));
@@ -96,8 +96,6 @@ class TestControllerTest {
 
         // 이미 ApiResponse로 래핑된 응답이므로 재래핑되지 않아야 함
         assertTrue(responseBody.contains("\"success\""));
-        assertTrue(responseBody.contains("\"code\""));
-        assertTrue(responseBody.contains("\"message\""));
         assertTrue(responseBody.contains("\"data\""));
         assertTrue(responseBody.contains("Already wrapped response"));
 
@@ -118,8 +116,6 @@ class TestControllerTest {
         // null 응답이 빈 성공 응답으로 래핑되어야 함
         if (!responseBody.isEmpty()) {
             assertTrue(responseBody.contains("\"success\":true"));
-            assertTrue(responseBody.contains("\"code\""));
-            assertTrue(responseBody.contains("\"message\""));
         }
         // data 필드는 null이므로 포함되지 않을 수 있음 (JsonInclude.Include.NON_NULL 설정)
     }

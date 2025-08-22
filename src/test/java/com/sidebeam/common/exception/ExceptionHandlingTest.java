@@ -1,10 +1,7 @@
 package com.sidebeam.common.exception;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.sidebeam.common.core.exception.BusinessException;
-import com.sidebeam.common.core.exception.ErrorCode;
 import com.sidebeam.common.core.exception.GlobalExceptionHandler;
-import com.sidebeam.common.core.exception.SystemException;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -14,9 +11,6 @@ import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -44,10 +38,9 @@ class ExceptionHandlingTest {
         mockMvc.perform(get("/test/business-exception"))
                 .andExpect(status().isNotFound())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$.code").value("BOOKMARK_NOT_FOUND"))
-                .andExpect(jsonPath("$.message").value("북마크를 찾을 수 없습니다."))
-                .andExpect(jsonPath("$.status").value(404))
-                .andExpect(jsonPath("$.path").value("/test/business-exception"))
+                .andExpect(jsonPath("$.error.code").value("BOOKMARK_NOT_FOUND"))
+                .andExpect(jsonPath("$.error.message").value("북마크를 찾을 수 없습니다."))
+                .andExpect(jsonPath("$.error.details.path").value("/test/business-exception"))
                 .andExpect(jsonPath("$.timestamp").exists());
     }
 
@@ -59,10 +52,9 @@ class ExceptionHandlingTest {
         mockMvc.perform(get("/test/system-exception"))
                 .andExpect(status().isServiceUnavailable())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$.code").value("GITLAB_CONNECTION_ERROR"))
-                .andExpect(jsonPath("$.message").value("GitLab 연결 중 오류가 발생했습니다."))
-                .andExpect(jsonPath("$.status").value(503))
-                .andExpect(jsonPath("$.path").value("/test/system-exception"))
+                .andExpect(jsonPath("$.error.code").value("GITLAB_CONNECTION_ERROR"))
+                .andExpect(jsonPath("$.error.message").value("GitLab 연결 중 오류가 발생했습니다."))
+                .andExpect(jsonPath("$.error.details.path").value("/test/system-exception"))
                 .andExpect(jsonPath("$.timestamp").exists());
     }
 
@@ -74,10 +66,9 @@ class ExceptionHandlingTest {
         mockMvc.perform(get("/test/illegal-argument"))
                 .andExpect(status().isBadRequest())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$.code").value("INVALID_REQUEST"))
-                .andExpect(jsonPath("$.message").value("잘못된 요청입니다."))
-                .andExpect(jsonPath("$.status").value(400))
-                .andExpect(jsonPath("$.path").value("/test/illegal-argument"))
+                .andExpect(jsonPath("$.error.code").value("INVALID_REQUEST"))
+                .andExpect(jsonPath("$.error.message").value("잘못된 요청입니다."))
+                .andExpect(jsonPath("$.error.details.path").value("/test/illegal-argument"))
                 .andExpect(jsonPath("$.timestamp").exists());
     }
 
@@ -89,10 +80,9 @@ class ExceptionHandlingTest {
         mockMvc.perform(get("/test/generic-exception"))
                 .andExpect(status().isInternalServerError())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$.code").value("INTERNAL_SERVER_ERROR"))
-                .andExpect(jsonPath("$.message").value("내부 서버 오류가 발생했습니다."))
-                .andExpect(jsonPath("$.status").value(500))
-                .andExpect(jsonPath("$.path").value("/test/generic-exception"))
+                .andExpect(jsonPath("$.error.code").value("INTERNAL_SERVER_ERROR"))
+                .andExpect(jsonPath("$.error.message").value("내부 서버 오류가 발생했습니다."))
+                .andExpect(jsonPath("$.error.details.path").value("/test/generic-exception"))
                 .andExpect(jsonPath("$.timestamp").exists());
     }
 
@@ -104,10 +94,9 @@ class ExceptionHandlingTest {
         mockMvc.perform(get("/test/missing-param"))
                 .andExpect(status().isBadRequest())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$.code").value("MISSING_REQUIRED_PARAMETER"))
-                .andExpect(jsonPath("$.message").value("필수 파라미터가 누락되었습니다."))
-                .andExpect(jsonPath("$.status").value(400))
-                .andExpect(jsonPath("$.path").value("/test/missing-param"))
+                .andExpect(jsonPath("$.error.code").value("MISSING_REQUIRED_PARAMETER"))
+                .andExpect(jsonPath("$.error.message").value("필수 파라미터가 누락되었습니다."))
+                .andExpect(jsonPath("$.error.details.path").value("/test/missing-param"))
                 .andExpect(jsonPath("$.timestamp").exists());
     }
 

@@ -20,9 +20,7 @@ public record GitLabFileDto(
     @JsonProperty("type")
     String type,
 
-    /**
-     * 파일 또는 디렉토리의 전체 경로
-     */
+    // 파일 또는 디렉토리의 전체 경로
     String path,
 
     /**

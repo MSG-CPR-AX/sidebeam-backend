@@ -12,71 +12,31 @@ package com.sidebeam.common.core.exception;
  * - 요청 데이터 구조 오류
  */
 public class ValidationException extends ApplicationException {
-    
-    /**
-     * ErrorCode를 사용하여 ValidationException을 생성합니다.
-     * 
-     * @param errorCode 오류 코드
-     */
+
     public ValidationException(ErrorCode errorCode) {
         super(errorCode);
     }
-    
-    /**
-     * ErrorCode와 추가 메시지를 사용하여 ValidationException을 생성합니다.
-     * 
-     * @param errorCode 오류 코드
-     * @param message 추가 오류 메시지
-     */
+
     public ValidationException(ErrorCode errorCode, String message) {
         super(errorCode, message);
     }
-    
-    /**
-     * ErrorCode와 원인 예외를 사용하여 ValidationException을 생성합니다.
-     * 
-     * @param errorCode 오류 코드
-     * @param cause 원인 예외
-     */
+
     public ValidationException(ErrorCode errorCode, Throwable cause) {
         super(errorCode, cause);
     }
-    
-    /**
-     * ErrorCode, 추가 메시지, 원인 예외를 사용하여 ValidationException을 생성합니다.
-     * 
-     * @param errorCode 오류 코드
-     * @param message 추가 오류 메시지
-     * @param cause 원인 예외
-     */
+
     public ValidationException(ErrorCode errorCode, String message, Throwable cause) {
         super(errorCode, message, cause);
     }
-    
-    /**
-     * 기존 코드와의 호환성을 위한 생성자
-     * 
-     * @param message 오류 메시지
-     */
+
     public ValidationException(String message) {
         super(message);
     }
-    
-    /**
-     * 기존 코드와의 호환성을 위한 생성자
-     * 
-     * @param cause 원인 예외
-     */
+
     public ValidationException(Throwable cause) {
         super(cause);
     }
-    
-    /**
-     * 기존 코드와의 호환성을 위한 생성자
-     * 
-     * @param message 오류 메시지
-     * @param cause 원인 예외
-     */
+
     public ValidationException(String message, Throwable cause) {
         super(message, cause);
     }

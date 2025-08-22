@@ -74,14 +74,22 @@ public class SchemaValidationServiceImpl implements SchemaValidationService {
                         String.join("\n", e.getAllMessages()));
 
                 log.error(errorMessage);
-                throw new IllegalArgumentException(errorMessage, e);
+                throw new com.sidebeam.common.core.exception.ValidationException(
+                        com.sidebeam.common.core.exception.ErrorCode.SCHEMA_VALIDATION_ERROR,
+                        errorMessage,
+                        e
+                );
             }
         } catch (IOException e) {
             log.error("Error loading schema or parsing YAML: {}", e.getMessage(), e);
 
             // 엄격한 검증 모드인 경우에만 예외 발생
             if (schemaValidationProperties.isStrict()) {
-                throw new IllegalArgumentException("Error loading schema or parsing YAML", e);
+                throw new com.sidebeam.common.core.exception.ValidationException(
+                        com.sidebeam.common.core.exception.ErrorCode.SCHEMA_VALIDATION_ERROR,
+                        "Error loading schema or parsing YAML",
+                        e
+                );
             } else {
                 log.warn("Schema loading failed but continuing due to non-strict validation mode");
             }
@@ -105,13 +113,14 @@ public class SchemaValidationServiceImpl implements SchemaValidationService {
 
             try {
                 this.validateYamlContent(content, filePath);
-            } catch (IllegalArgumentException e) {
+            } catch (com.sidebeam.common.core.exception.ValidationException e) {
                 hasErrors = true;
                 errorMessages.append(e.getMessage()).append("\n");
             }
         }
 
         if (hasErrors && schemaValidationProperties.isStrict()) {
+            // 테스트 계약에 따라 혼합 유효/무효 파일의 배치 검증 실패 시 IllegalArgumentException을 던집니다.
             throw new IllegalArgumentException("Schema validation failed for one or more files:\n" + errorMessages);
         } else if (hasErrors) {
             log.warn("Schema validation failed for some files but continuing due to non-strict validation mode");

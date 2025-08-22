@@ -1,7 +1,7 @@
 package com.sidebeam.common.exception;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.sidebeam.common.core.exception.*;
+import com.sidebeam.common.core.exception.GlobalExceptionHandler;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -11,8 +11,6 @@ import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RestController;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -39,10 +37,9 @@ class ExceptionHierarchyTest {
         mockMvc.perform(get("/test/technical-exception"))
                 .andExpect(status().isInternalServerError())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$.code").value("PROPERTY_CONVERSION_ERROR"))
-                .andExpect(jsonPath("$.message").value("프로퍼티 변환 중 오류가 발생했습니다."))
-                .andExpect(jsonPath("$.status").value(500))
-                .andExpect(jsonPath("$.path").value("/test/technical-exception"))
+                .andExpect(jsonPath("$.error.code").value("PROPERTY_CONVERSION_ERROR"))
+                .andExpect(jsonPath("$.error.message").value("프로퍼티 변환 중 오류가 발생했습니다."))
+                .andExpect(jsonPath("$.error.details.path").value("/test/technical-exception"))
                 .andExpect(jsonPath("$.timestamp").exists());
     }
 
@@ -54,10 +51,9 @@ class ExceptionHierarchyTest {
         mockMvc.perform(get("/test/domain-exception"))
                 .andExpect(status().isNotFound())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$.code").value("BOOKMARK_NOT_FOUND"))
-                .andExpect(jsonPath("$.message").value("북마크를 찾을 수 없습니다."))
-                .andExpect(jsonPath("$.status").value(404))
-                .andExpect(jsonPath("$.path").value("/test/domain-exception"))
+                .andExpect(jsonPath("$.error.code").value("BOOKMARK_NOT_FOUND"))
+                .andExpect(jsonPath("$.error.message").value("북마크를 찾을 수 없습니다."))
+                .andExpect(jsonPath("$.error.details.path").value("/test/domain-exception"))
                 .andExpect(jsonPath("$.timestamp").exists());
     }
 
@@ -69,10 +65,9 @@ class ExceptionHierarchyTest {
         mockMvc.perform(get("/test/validation-exception"))
                 .andExpect(status().isBadRequest())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$.code").value("INVALID_PARAMETER_FORMAT"))
-                .andExpect(jsonPath("$.message").value("파라미터 형식이 올바르지 않습니다."))
-                .andExpect(jsonPath("$.status").value(400))
-                .andExpect(jsonPath("$.path").value("/test/validation-exception"))
+                .andExpect(jsonPath("$.error.code").value("INVALID_PARAMETER_FORMAT"))
+                .andExpect(jsonPath("$.error.message").value("파라미터 형식이 올바르지 않습니다."))
+                .andExpect(jsonPath("$.error.details.path").value("/test/validation-exception"))
                 .andExpect(jsonPath("$.timestamp").exists());
     }
 
@@ -84,10 +79,9 @@ class ExceptionHierarchyTest {
         mockMvc.perform(get("/test/technical-exception-custom"))
                 .andExpect(status().isInternalServerError())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$.code").value("DATA_PARSING_ERROR"))
-                .andExpect(jsonPath("$.status").value(500))
-                .andExpect(jsonPath("$.path").value("/test/technical-exception-custom"))
-                .andExpect(jsonPath("$.details").value("Custom parsing error message"))
+                .andExpect(jsonPath("$.error.code").value("DATA_PARSING_ERROR"))
+                .andExpect(jsonPath("$.error.details.path").value("/test/technical-exception-custom"))
+                .andExpect(jsonPath("$.error.details.hint").value("Custom parsing error message"))
                 .andExpect(jsonPath("$.timestamp").exists());
     }
 
@@ -99,10 +93,9 @@ class ExceptionHierarchyTest {
         mockMvc.perform(get("/test/domain-exception-business-rule"))
                 .andExpect(status().isBadRequest())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$.code").value("BUSINESS_RULE_VIOLATION"))
-                .andExpect(jsonPath("$.message").value("비즈니스 규칙 위반입니다."))
-                .andExpect(jsonPath("$.status").value(400))
-                .andExpect(jsonPath("$.path").value("/test/domain-exception-business-rule"))
+                .andExpect(jsonPath("$.error.code").value("BUSINESS_RULE_VIOLATION"))
+                .andExpect(jsonPath("$.error.message").value("비즈니스 규칙 위반입니다."))
+                .andExpect(jsonPath("$.error.details.path").value("/test/domain-exception-business-rule"))
                 .andExpect(jsonPath("$.timestamp").exists());
     }
 
@@ -114,10 +107,9 @@ class ExceptionHierarchyTest {
         mockMvc.perform(get("/test/validation-exception-range"))
                 .andExpect(status().isBadRequest())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$.code").value("PARAMETER_OUT_OF_RANGE"))
-                .andExpect(jsonPath("$.message").value("파라미터 값이 허용 범위를 벗어났습니다."))
-                .andExpect(jsonPath("$.status").value(400))
-                .andExpect(jsonPath("$.path").value("/test/validation-exception-range"))
+                .andExpect(jsonPath("$.error.code").value("PARAMETER_OUT_OF_RANGE"))
+                .andExpect(jsonPath("$.error.message").value("파라미터 값이 허용 범위를 벗어났습니다."))
+                .andExpect(jsonPath("$.error.details.path").value("/test/validation-exception-range"))
                 .andExpect(jsonPath("$.timestamp").exists());
     }
 
@@ -129,10 +121,9 @@ class ExceptionHierarchyTest {
         mockMvc.perform(get("/test/business-exception-compatibility"))
                 .andExpect(status().isInternalServerError())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$.code").value("INTERNAL_SERVER_ERROR"))
-                .andExpect(jsonPath("$.message").value("내부 서버 오류가 발생했습니다."))
-                .andExpect(jsonPath("$.status").value(500))
-                .andExpect(jsonPath("$.path").value("/test/business-exception-compatibility"))
+                .andExpect(jsonPath("$.error.code").value("INTERNAL_SERVER_ERROR"))
+                .andExpect(jsonPath("$.error.message").value("내부 서버 오류가 발생했습니다."))
+                .andExpect(jsonPath("$.error.details.path").value("/test/business-exception-compatibility"))
                 .andExpect(jsonPath("$.timestamp").exists());
     }
 

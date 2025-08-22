@@ -16,7 +16,9 @@ import java.util.function.Function;
 @Slf4j
 public class GitLabApiPagingUtils {
 
-    private static String X_NEXT_PAGE_HEADER = "X-Next-Page";
+    private GitLabApiPagingUtils() {}
+
+    private static final String X_NEXT_PAGE_HEADER = "X-Next-Page";
 
     /**
      * GitLab 스타일의 페이지 기반 API 순회를 통해 전체 데이터를 Flux<T>로 평탄화해서 반환합니다.

@@ -11,71 +11,31 @@ package com.sidebeam.common.core.exception;
  * - 비즈니스 프로세스 오류
  */
 public class BusinessException extends ApplicationException {
-    
-    /**
-     * ErrorCode를 사용하여 DomainException을 생성합니다.
-     * 
-     * @param errorCode 오류 코드
-     */
+
     public BusinessException(ErrorCode errorCode) {
         super(errorCode);
     }
-    
-    /**
-     * ErrorCode와 추가 메시지를 사용하여 DomainException을 생성합니다.
-     * 
-     * @param errorCode 오류 코드
-     * @param message 추가 오류 메시지
-     */
+
     public BusinessException(ErrorCode errorCode, String message) {
         super(errorCode, message);
     }
-    
-    /**
-     * ErrorCode와 원인 예외를 사용하여 DomainException을 생성합니다.
-     * 
-     * @param errorCode 오류 코드
-     * @param cause 원인 예외
-     */
+
     public BusinessException(ErrorCode errorCode, Throwable cause) {
         super(errorCode, cause);
     }
-    
-    /**
-     * ErrorCode, 추가 메시지, 원인 예외를 사용하여 DomainException을 생성합니다.
-     * 
-     * @param errorCode 오류 코드
-     * @param message 추가 오류 메시지
-     * @param cause 원인 예외
-     */
+
     public BusinessException(ErrorCode errorCode, String message, Throwable cause) {
         super(errorCode, message, cause);
     }
-    
-    /**
-     * 기존 코드와의 호환성을 위한 생성자
-     * 
-     * @param message 오류 메시지
-     */
+
     public BusinessException(String message) {
         super(message);
     }
-    
-    /**
-     * 기존 코드와의 호환성을 위한 생성자
-     * 
-     * @param cause 원인 예외
-     */
+
     public BusinessException(Throwable cause) {
         super(cause);
     }
-    
-    /**
-     * 기존 코드와의 호환성을 위한 생성자
-     * 
-     * @param message 오류 메시지
-     * @param cause 원인 예외
-     */
+
     public BusinessException(String message, Throwable cause) {
         super(message, cause);
     }

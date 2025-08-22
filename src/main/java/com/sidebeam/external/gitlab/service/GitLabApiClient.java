@@ -1,31 +1,23 @@
 package com.sidebeam.external.gitlab.service;
 
-import com.sidebeam.external.gitlab.constant.GitLabApiConstants;
+import com.sidebeam.common.core.exception.ErrorCode;
+import com.sidebeam.common.core.exception.TechnicalException;
 import com.sidebeam.external.gitlab.config.property.GitLabApiProperties;
 import com.sidebeam.external.gitlab.config.property.GitLabProperties;
+import com.sidebeam.external.gitlab.constant.GitLabApiConstants;
 import com.sidebeam.external.gitlab.dto.GitLabFileDto;
 import com.sidebeam.external.gitlab.dto.GitLabGroupDto;
 import com.sidebeam.external.gitlab.dto.GitLabProjectDto;
-import com.sidebeam.external.gitlab.dto.RepositoryFileDto;
 import com.sidebeam.external.gitlab.util.GitLabApiPagingUtils;
-import io.netty.handler.ssl.SslContextBuilder;
-import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpStatusCode;
-import org.springframework.http.ResponseEntity;
-import org.springframework.http.client.reactive.ReactorClientHttpConnector;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-import reactor.netty.http.client.HttpClient;
 
-import javax.net.ssl.SSLException;
 import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.function.Function;
 
 /**
  * GitLab API와 통신하기 위한 클라이언트 컴포넌트입니다.
@@ -38,29 +30,18 @@ public class GitLabApiClient {
     private final WebClient gitLabWebClient;
     private final GitLabProperties gitLabProperties;
     private final GitLabApiProperties apiProperties;
+    private final RetryPolicy retryPolicy;
 
-    public GitLabApiClient(WebClient.Builder webClientBuilder, GitLabProperties gitLabProperties, GitLabApiProperties apiProperties) {
+    public GitLabApiClient(WebClient.Builder webClientBuilder,
+                           GitLabProperties gitLabProperties,
+                           GitLabApiProperties apiProperties,
+                           RetryPolicy retryPolicy) {
         this.gitLabProperties = gitLabProperties;
         this.apiProperties = apiProperties;
+        this.retryPolicy = retryPolicy;
 
-        // SSL 검증을 비활성화한 HttpClient 생성
-        HttpClient httpClient = HttpClient.create()
-                .wiretap(true) // 네트워크 레벨 로깅 활성화
-                .secure(sslSpec -> {
-                    try {
-                        sslSpec.sslContext(
-                                SslContextBuilder.forClient()
-                                        .trustManager(InsecureTrustManagerFactory.INSTANCE)
-                                        .build()
-                        );
-                    } catch (SSLException e) {
-                        throw new RuntimeException(e);
-                    }
-                });
-
-
+        // 공통 WebClient 설정(WebClientConfig) 사용: 타임아웃/커넥션 풀/SSL 검증은 글로벌 설정에 따름
         this.gitLabWebClient = webClientBuilder
-                .clientConnector(new ReactorClientHttpConnector(httpClient))
                 .baseUrl(gitLabProperties.getApiUrl())
                 .defaultHeader("PRIVATE-TOKEN", gitLabProperties.getAccessToken())
                 .filter((request, next) -> {
@@ -73,18 +54,26 @@ public class GitLabApiClient {
 
     /**
      * GitLab API를 호출하여 그룹 정보를 가져옵니다.
+     *
+     * <p>Resilience4j 애노테이션 대신 {@link RetryPolicy}를 사용하여
+     * 재시도와 오류 매핑을 일관되게 적용합니다. 오류는 내부 mapError() 메서드를 통해 도메인 예외로 변환됩니다.</p>
      */
     public Mono<GitLabGroupDto> getGroup(String groupId) {
         log.debug("Fetching group info for groupId: {}", groupId);
 
         String path = apiProperties.getGroupEndpoints().getGet();
-        return gitLabWebClient.get()
+        Mono<GitLabGroupDto> call = gitLabWebClient.get()
                 .uri("/" + path, groupId)
                 .retrieve()
                 .bodyToMono(GitLabGroupDto.class)
                 .doOnSuccess(response -> log.debug("Successfully fetched group info for groupId: {}", groupId))
                 .doOnError(error -> log.error("Error fetching group info for groupId: {}", groupId, error));
+
+        return retryPolicy.withRetry(call, "getGroup")
+                .onErrorMap(throwable -> mapError("getGroup", throwable));
     }
+
+    // Resilience4j용 fallback 메서드는 삭제되었습니다. 오류 처리는 내부 mapError()에서 처리합니다.
 
     /**
      * GitLab API를 호출하여 하위 그룹 목록을 가져옵니다.
@@ -96,7 +85,7 @@ public class GitLabApiClient {
         log.debug("Fetching subgroups for groupId: {}", groupId);
 
         String path = apiProperties.getGroupEndpoints().getSubgroups();
-        return gitLabWebClient.get()
+        Flux<GitLabGroupDto> call = gitLabWebClient.get()
                 .uri(uriBuilder -> uriBuilder
                         .path("/" + path)
                         .queryParam(GitLabApiConstants.PARAM_PER_PAGE, GitLabApiConstants.DEFAULT_PER_PAGE)
@@ -105,7 +94,11 @@ public class GitLabApiClient {
                 .bodyToFlux(GitLabGroupDto.class)
                 .doOnComplete(() -> log.debug("Successfully fetched subgroups for groupId: {}", groupId))
                 .doOnError(error -> log.error("Error fetching subgroups for groupId: {}", groupId, error));
+        return retryPolicy.withRetry(call, "getSubgroups")
+                .onErrorMap(throwable -> mapError("getSubgroups", throwable));
     }
+
+    // Resilience4j용 fallback 메서드는 삭제되었습니다. 오류 처리는 내부 mapError()에서 처리합니다.
 
     /**
      * GitLab API를 호출하여 그룹 내 프로젝트 목록을 가져옵니다.
@@ -117,7 +110,7 @@ public class GitLabApiClient {
 
         String path = apiProperties.getGroupEndpoints().getProjects();
 
-        return GitLabApiPagingUtils.paginateAll(page -> gitLabWebClient.get()
+        Flux<GitLabProjectDto> call = GitLabApiPagingUtils.paginateAll(page -> gitLabWebClient.get()
                         .uri(uriBuilder -> uriBuilder
                                 .path("/" + path)
                                 .queryParam(GitLabApiConstants.PARAM_PER_PAGE, GitLabApiConstants.DEFAULT_PER_PAGE)
@@ -128,8 +121,13 @@ public class GitLabApiClient {
                         .toEntityList(new ParameterizedTypeReference<GitLabProjectDto>() {}))
                 .doOnNext(project -> log.debug("프로젝트 수신: ID={}, Name={}", project.id(), project.name()))
                 .doOnComplete(() -> log.debug("모든 프로젝트 조회 완료 - groupId: {}", groupId))
-                .doOnError(error -> log.error("전체 프로젝트 조회 실패 - groupId: {}", groupId, error)); // flatten List<GitLabProjectDto> → GitLabProjectDto
+                .doOnError(error -> log.error("전체 프로젝트 조회 실패 - groupId: {}", groupId, error));
+
+        return retryPolicy.withRetry(call, "getProjectIdListByGroupId")
+                .onErrorMap(throwable -> mapError("getProjectIdListByGroupId", throwable));
     }
+
+    // Resilience4j용 fallback 메서드는 삭제되었습니다. 오류 처리는 내부 mapError()에서 처리합니다.
 
     /**
      * GitLab API를 호출하여 프로젝트 내 파일 목록을 가져옵니다.
@@ -139,7 +137,7 @@ public class GitLabApiClient {
 
         String apiPath = apiProperties.getProjectEndpoints().getRepository().getTree();
 
-        return GitLabApiPagingUtils.paginateAll(page ->
+        Flux<GitLabFileDto> call = GitLabApiPagingUtils.paginateAll(page ->
                         gitLabWebClient.get()
                                 .uri(uriBuilder -> uriBuilder
                                         .path("/" + apiPath)
@@ -153,12 +151,15 @@ public class GitLabApiClient {
                                         response.bodyToMono(String.class)
                                                 .flatMap(body -> Mono.error(new RuntimeException("GitLab API error: " + body)))
                                 )
-                                .toEntityList(new ParameterizedTypeReference<List<GitLabFileDto>>() {})
-                )
+                                .toEntityList(new ParameterizedTypeReference<List<GitLabFileDto>>() {}))
                 .flatMap(Flux::fromIterable) // flatten List<GitLabFileDto> → GitLabFileDto
                 .doOnComplete(() -> log.debug("Successfully fetched repository files for projectId: {}, path: {}", projectId, path))
                 .doOnError(error -> log.error("Error fetching repository files for projectId: {}, path: {}", projectId, path, error));
+        return retryPolicy.withRetry(call, "getRepositoryFiles")
+                .onErrorMap(throwable -> mapError("getRepositoryFiles", throwable));
     }
+
+    // Resilience4j용 fallback 메서드는 삭제되었습니다. 오류 처리는 내부 mapError()에서 처리합니다.
 
     /**
      * GitLab API를 호출하여 파일 내용을 가져옵니다.
@@ -167,7 +168,7 @@ public class GitLabApiClient {
         log.debug("Fetching file content for projectId: {}, filePath: {}", projectId, filePath);
 
         String apiPath = apiProperties.getProjectEndpoints().getRepository().getFile().getRaw();
-        return gitLabWebClient.get()
+        Mono<String> call = gitLabWebClient.get()
                 .uri(uriBuilder -> uriBuilder
                         .path("/" + apiPath)
                         .queryParam(GitLabApiConstants.PARAM_REF, gitLabProperties.getBranch())
@@ -176,5 +177,22 @@ public class GitLabApiClient {
                 .bodyToMono(String.class)
                 .doOnSuccess(response -> log.debug("Successfully fetched file content for projectId: {}, filePath: {}", projectId, filePath))
                 .doOnError(error -> log.error("Error fetching file content for projectId: {}, filePath: {}", projectId, filePath, error));
+        return retryPolicy.withRetry(call, "getFileContent")
+                .onErrorMap(throwable -> mapError("getFileContent", throwable));
+    }
+
+    // Resilience4j용 fallback 메서드는 삭제되었습니다. 오류 처리는 내부 mapError()에서 처리합니다.
+
+    /**
+     * 외부 호출에서 발생한 예외를 공통 도메인 예외로 변환합니다.
+     * 특정 컨텍스트 정보를 포함하여 로그를 남기고 {@link TechnicalException}으로 감싸 반환합니다.
+     *
+     * @param context 호출 중인 메서드명 등 컨텍스트 식별자
+     * @param throwable 발생한 원본 예외
+     * @return 도메인 계층에서 사용할 RuntimeException
+     */
+    private RuntimeException mapError(String context, Throwable throwable) {
+        log.error("[External] {} 실패: {}", context, throwable.getMessage(), throwable);
+        return new TechnicalException(ErrorCode.GITLAB_API_ERROR, "외부 시스템 호출 실패(" + context + ")", throwable);
     }
 }

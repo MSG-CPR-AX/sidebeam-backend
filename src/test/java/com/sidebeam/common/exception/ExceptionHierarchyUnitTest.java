@@ -1,6 +1,7 @@
 package com.sidebeam.common.exception;
 
 import com.sidebeam.common.core.exception.*;
+import com.sidebeam.common.rest.response.ApiResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
@@ -33,15 +34,13 @@ class ExceptionHierarchyUnitTest {
         TechnicalException exception = new TechnicalException(ErrorCode.PROPERTY_CONVERSION_ERROR);
         
         // When
-        ResponseEntity<ErrorResponse> response = exceptionHandler.handleTechnicalException(exception, request);
+        ResponseEntity<ApiResponse<Void>> response = exceptionHandler.handleTechnicalException(exception, request);
         
         // Then
         assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.getStatusCode());
         assertNotNull(response.getBody());
-        assertEquals("PROPERTY_CONVERSION_ERROR", response.getBody().getCode());
-        assertEquals("프로퍼티 변환 중 오류가 발생했습니다.", response.getBody().getMessage());
-        assertEquals(500, response.getBody().getStatus());
-        assertEquals("/test/endpoint", response.getBody().getPath());
+        assertEquals("PROPERTY_CONVERSION_ERROR", response.getBody().getError().getCode());
+        assertEquals("프로퍼티 변환 중 오류가 발생했습니다.", response.getBody().getError().getMessage());
     }
 
     /**
@@ -54,14 +53,13 @@ class ExceptionHierarchyUnitTest {
         TechnicalException exception = new TechnicalException(ErrorCode.DATA_PARSING_ERROR, customMessage);
         
         // When
-        ResponseEntity<ErrorResponse> response = exceptionHandler.handleTechnicalException(exception, request);
+        ResponseEntity<ApiResponse<Void>> response = exceptionHandler.handleTechnicalException(exception, request);
         
         // Then
         assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.getStatusCode());
         assertNotNull(response.getBody());
-        assertEquals("DATA_PARSING_ERROR", response.getBody().getCode());
-        assertEquals(customMessage, response.getBody().getDetails());
-        assertEquals(500, response.getBody().getStatus());
+        assertEquals("DATA_PARSING_ERROR", response.getBody().getError().getCode());
+        assertTrue(response.getBody().getError().getDetails().containsValue(customMessage));
     }
 
     /**
@@ -73,15 +71,13 @@ class ExceptionHierarchyUnitTest {
         BusinessException exception = new BusinessException(ErrorCode.BOOKMARK_NOT_FOUND);
         
         // When
-        ResponseEntity<ErrorResponse> response = exceptionHandler.handleDomainException(exception, request);
+        ResponseEntity<ApiResponse<Void>> response = exceptionHandler.handleDomainException(exception, request);
         
         // Then
         assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
         assertNotNull(response.getBody());
-        assertEquals("BOOKMARK_NOT_FOUND", response.getBody().getCode());
-        assertEquals("북마크를 찾을 수 없습니다.", response.getBody().getMessage());
-        assertEquals(404, response.getBody().getStatus());
-        assertEquals("/test/endpoint", response.getBody().getPath());
+        assertEquals("BOOKMARK_NOT_FOUND", response.getBody().getError().getCode());
+        assertEquals("북마크를 찾을 수 없습니다.", response.getBody().getError().getMessage());
     }
 
     /**
@@ -93,14 +89,13 @@ class ExceptionHierarchyUnitTest {
         BusinessException exception = new BusinessException(ErrorCode.BUSINESS_RULE_VIOLATION);
         
         // When
-        ResponseEntity<ErrorResponse> response = exceptionHandler.handleDomainException(exception, request);
+        ResponseEntity<ApiResponse<Void>> response = exceptionHandler.handleDomainException(exception, request);
         
         // Then
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
         assertNotNull(response.getBody());
-        assertEquals("BUSINESS_RULE_VIOLATION", response.getBody().getCode());
-        assertEquals("비즈니스 규칙 위반입니다.", response.getBody().getMessage());
-        assertEquals(400, response.getBody().getStatus());
+        assertEquals("BUSINESS_RULE_VIOLATION", response.getBody().getError().getCode());
+        assertEquals("비즈니스 규칙 위반입니다.", response.getBody().getError().getMessage());
     }
 
     /**
@@ -112,15 +107,13 @@ class ExceptionHierarchyUnitTest {
         ValidationException exception = new ValidationException(ErrorCode.INVALID_PARAMETER_FORMAT);
         
         // When
-        ResponseEntity<ErrorResponse> response = exceptionHandler.handleValidationException(exception, request);
+        ResponseEntity<ApiResponse<Void>> response = exceptionHandler.handleValidationException(exception, request);
         
         // Then
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
         assertNotNull(response.getBody());
-        assertEquals("INVALID_PARAMETER_FORMAT", response.getBody().getCode());
-        assertEquals("파라미터 형식이 올바르지 않습니다.", response.getBody().getMessage());
-        assertEquals(400, response.getBody().getStatus());
-        assertEquals("/test/endpoint", response.getBody().getPath());
+        assertEquals("INVALID_PARAMETER_FORMAT", response.getBody().getError().getCode());
+        assertEquals("파라미터 형식이 올바르지 않습니다.", response.getBody().getError().getMessage());
     }
 
     /**
@@ -132,14 +125,13 @@ class ExceptionHierarchyUnitTest {
         ValidationException exception = new ValidationException(ErrorCode.PARAMETER_OUT_OF_RANGE);
         
         // When
-        ResponseEntity<ErrorResponse> response = exceptionHandler.handleValidationException(exception, request);
+        ResponseEntity<ApiResponse<Void>> response = exceptionHandler.handleValidationException(exception, request);
         
         // Then
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
         assertNotNull(response.getBody());
-        assertEquals("PARAMETER_OUT_OF_RANGE", response.getBody().getCode());
-        assertEquals("파라미터 값이 허용 범위를 벗어났습니다.", response.getBody().getMessage());
-        assertEquals(400, response.getBody().getStatus());
+        assertEquals("PARAMETER_OUT_OF_RANGE", response.getBody().getError().getCode());
+        assertEquals("파라미터 값이 허용 범위를 벗어났습니다.", response.getBody().getError().getMessage());
     }
 
     /**
@@ -151,14 +143,13 @@ class ExceptionHierarchyUnitTest {
         SystemException exception = new SystemException(ErrorCode.GITLAB_CONNECTION_ERROR);
         
         // When
-        ResponseEntity<ErrorResponse> response = exceptionHandler.handleSystemException(exception, request);
+        ResponseEntity<ApiResponse<Void>> response = exceptionHandler.handleSystemException(exception, request);
         
         // Then
         assertEquals(HttpStatus.SERVICE_UNAVAILABLE, response.getStatusCode());
         assertNotNull(response.getBody());
-        assertEquals("GITLAB_CONNECTION_ERROR", response.getBody().getCode());
-        assertEquals("GitLab 연결 중 오류가 발생했습니다.", response.getBody().getMessage());
-        assertEquals(503, response.getBody().getStatus());
+        assertEquals("GITLAB_CONNECTION_ERROR", response.getBody().getError().getCode());
+        assertEquals("GitLab 연결 중 오류가 발생했습니다.", response.getBody().getError().getMessage());
     }
 
     /**

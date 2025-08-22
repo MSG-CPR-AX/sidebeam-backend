@@ -15,15 +15,51 @@ logging:
     # org.springframework: DEBUG
     com.sidebeam: DEBUG
 
+# Spring Boot Actuator 설정
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus,env,configprops
+      base-path: /actuator
+  endpoint:
+    health:
+      show-details: when-authorized
+      show-components: always
+      probes:
+        enabled: true
+  health:
+    readiness-state:
+      enabled: true
+    liveness-state:
+      enabled: true
+    circuit-breakers:
+      enabled: true
+  info:
+    env:
+      enabled: true
+    build:
+      enabled: true
+    git:
+      mode: full
+  metrics:
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
+      percentiles:
+        http.server.requests: 0.5, 0.9, 0.95, 0.99
+      sla:
+        http.server.requests: 10ms, 50ms, 100ms, 200ms, 500ms
+
 # GitLab 설정
 gitlab:
   # GitLab API URL (예: https://gitlab.com)
   api-url: https://gitlab.com
-  # read_repository 권한을 가진 개인 액세스 토큰 (ENC(...) 제공용 환경변수 사용)
-  access-token: ${GITLAB_ACCESS_TOKEN_ENC:}
-  # 모든 하위 그룹과 프로젝트를 가져올 루트 그룹 ID (필요 시 ENC(...) 제공)
-  root-group-id: ${GITLAB_ROOT_GROUP_ID_ENC:}
-  # 데이터를 가져올 브랜치 이름 (평문 허용)
+  # read_repository 권한을 가진 개인 액세스 토큰 (Jasypt로 암호화됨)
+  access-token: ENC(cIe5EbJKeVmkxdEKczOsGtzePJ0Vx8pz+AlGnCC4l+Pf8apzW1mLkI4hpdQIOYtO6P3pEcWUqhw0/cDRctKSuzapPiXxnHu0sSIsl292N70=)
+  # 모든 하위 그룹과 프로젝트를 가져올 루트 그룹 ID (Jasypt로 암호화됨)
+  root-group-id: ENC(I8A/XZ2Ik0EYF/i67hGiZu8JystOPgcYQVTzyCiLrV06rl6nRfkpJy4MEBf6ln8H)
+  # 데이터를 가져올 브랜치 이름
   branch: ${GITLAB_BRANCH:main}
   # 저장소 내 북마크 데이터 디렉토리 경로
   # 이 경로는 sidebeam-data가 아닌 다른 저장소에 사용됩니다
@@ -37,11 +73,6 @@ gitlab:
     - '.gitlab-ci.yml'
   api:
     config: classpath:/gitlab/gitlab-api.yml
-
-# Jasypt 설정 (마스터 키는 환경변수로만 주입)
-jasypt:
-  encryptor:
-    password: ${JASYPT_ENCRYPTOR_PASSWORD:}
 
 springdoc:
   api-docs:
@@ -77,5 +108,74 @@ validation:
 
 # 웹훅 설정
 webhook:
-  # GitLab 웹훅 검증을 위한 비밀 토큰 (ENC(...) 제공용 환경변수 사용)
-  secret-token: ${WEBHOOK_SECRET_TOKEN_ENC:}
+  # GitLab 웹훅 검증을 위한 비밀 토큰 (Jasypt로 암호화됨)
+  secret-token: ENC(YIlaEdxWQc9PWHU4IpSDdXRUWBMELsTSgV6o3ZuYttmqe78dTFb1OK77wxazSZhVUlll7Xbc6gSxrShXtKqGqyz4b5wNjjVXcbEOyRVkGvs=)
+
+# Jasypt 암호화 설정 (로컬 개발환경 전용)
+jasypt:
+  encryptor:
+    # 환경변수 JASYPT_ENCRYPTOR_PASSWORD로부터 마스터 키 주입
+    password: ${JASYPT_ENCRYPTOR_PASSWORD:}
+    # 기본 알고리즘 사용 (PBEWITHHMACSHA512ANDAES_256)
+    algorithm: PBEWITHHMACSHA512ANDAES_256
+    # 반복 횟수 (기본값: 1000)
+    key-obtention-iterations: 1000
+    # 풀 사이즈 (기본값: 1) - 성능 최적화용
+    pool-size: 1
+    # 솔트 생성기 (기본값: org.jasypt.salt.RandomSaltGenerator)
+    salt-generator-classname: org.jasypt.salt.RandomSaltGenerator
+    # IV 생성기 (기본값: org.jasypt.iv.RandomIvGenerator)
+    iv-generator-classname: org.jasypt.iv.RandomIvGenerator
+    # 문자열 출력 타입 (기본값: base64)
+    string-output-type: base64
+
+
+# Resilience4j 설정 (외부 연동 회복탄력성)
+resilience4j:
+  circuitbreaker:
+    instances:
+      gitlab:
+        registerHealthIndicator: true
+        slidingWindowType: COUNT_BASED
+        slidingWindowSize: 50
+        minimumNumberOfCalls: 10
+        failureRateThreshold: 50
+        waitDurationInOpenState: 10s
+        permittedNumberOfCallsInHalfOpenState: 5
+        automaticTransitionFromOpenToHalfOpenEnabled: true
+  retry:
+    instances:
+      gitlab:
+        maxAttempts: 3
+        waitDuration: 300ms
+        retryExceptions:
+          - org.springframework.web.client.RestClientException
+          - java.net.ConnectException
+          - java.io.IOException
+          - java.util.concurrent.TimeoutException
+          - java.net.SocketTimeoutException
+  bulkhead:
+    instances:
+      gitlab:
+        maxConcurrentCalls: 20
+        maxWaitDuration: 1s
+
+
+# 보안 설정 (API Key 인증: 기본 비활성화)
+security:
+  api-key:
+    enabled: ${SECURITY_API_KEY_ENABLED:false}
+    header-name: ${SECURITY_API_KEY_HEADER:X-Api-Key}
+    value: ${SECURITY_API_KEY_VALUE:}
+    # 추가 제외 패턴(있다면 콤마로 구분)
+    exclude-patterns: ${SECURITY_API_KEY_EXCLUDES:}
+
+# HTTP Client 성능/확장성 설정 (Reactor Netty 기반 WebClient)
+http:
+  client:
+    connect-timeout-millis: 3000
+    response-timeout-millis: 5000
+    pool-max-connections: 100
+    pending-acquire-timeout-millis: 2000
+    pool-max-idle-time: 30s
+    pool-max-life-time: 5m

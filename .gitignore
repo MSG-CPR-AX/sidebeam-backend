@@ -50,8 +50,5 @@ application-local.yml
 ### Test Reports ###
 test-results/
 
-### Reference Files ###
-reference/
-
-### Reference Files ###
+### Reference Codes ###
 reference/

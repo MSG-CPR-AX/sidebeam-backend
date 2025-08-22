@@ -35,7 +35,7 @@ public class BookmarkServiceImpl implements BookmarkService {
 
     private final GitLabService gitLabService;
     private final SchemaValidationService schemaValidationService;
-    private final BookmarkValidator bookMarkValidator;
+    private final BookmarkValidator bookmarkValidator;
     private final ObjectMapper yamlMapper;
 
     /**
@@ -52,10 +52,10 @@ public class BookmarkServiceImpl implements BookmarkService {
     @Autowired @Lazy
     private BookmarkService self;
 
-    public BookmarkServiceImpl(GitLabService gitLabService, SchemaValidationService schemaValidationService, BookmarkValidator bookMarkValidator) {
+    public BookmarkServiceImpl(GitLabService gitLabService, SchemaValidationService schemaValidationService, BookmarkValidator bookmarkValidator) {
         this.gitLabService = gitLabService;
         this.schemaValidationService = schemaValidationService;
-        this.bookMarkValidator = bookMarkValidator;
+        this.bookmarkValidator = bookmarkValidator;
         this.yamlMapper = new ObjectMapper(new YAMLFactory());
     }
 
@@ -75,14 +75,8 @@ public class BookmarkServiceImpl implements BookmarkService {
         AllFilesContentDto allFilesContent = gitLabService.retrieveAllYamlFiles();
 
         // 정의된 스키마 기반 조회된 모든 YAML의 유효성 검증
-        try {
-            schemaValidationService.validateAllYamlFiles(allFilesContent);
-            log.debug("All YAML files passed schema validation");
-        } catch (IllegalArgumentException e) {
-            // TODO : 오류 처리 고도화 필요
-            log.warn("Schema validation failed: {}", e.getMessage());
-            return new ArrayList<>();
-        }
+        schemaValidationService.validateAllYamlFiles(allFilesContent);
+        log.debug("All YAML files passed schema validation");
 
         List<Bookmark> bookmarks = new ArrayList<>();
 
@@ -97,7 +91,7 @@ public class BookmarkServiceImpl implements BookmarkService {
         }
 
         // 중복 URL 존재 유무 검증
-        bookMarkValidator.checkDuplicateUrls(bookmarks);
+        bookmarkValidator.checkDuplicateUrls(bookmarks);
 
         log.debug("Fetched {} bookmarks from {} files", bookmarks.size(), allFilesContent.fileContents().size());
         return BookmarkMapper.INSTANCE.toDto(bookmarks);

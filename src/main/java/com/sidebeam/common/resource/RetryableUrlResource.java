@@ -29,32 +29,32 @@ public class RetryableUrlResource extends UrlResource {
      * 재시도 최대 횟수 설정값 (기본값: 6회)
      * 네트워크 불안정 상황에서 충분한 재시도 기회를 제공하면서도 무한 대기를 방지한다.
      */
-    private static int _maxAttempts = 6;
+    private static int maxAttempts = 6;
 
     /**
      * 첫 번째 재시도 전 대기 시간 (기본값: 1000ms)
      * 일시적인 네트워크 오류 해결을 위한 초기 대기 간격을 설정한다.
      */
-    private static long _initialInterval = 1000;
+    private static long initialInterval = 1000;
 
     /**
      * 재시도 간격 증가 배수 (기본값: 1.1)
      * 지수 백오프 방식으로 재시도 간격을 점진적으로 늘려 서버 부하를 줄인다.
      */
-    private static double _multiplier = 1.1;
+    private static double multiplier = 1.1;
 
     /**
      * 재시도 간격 최대값 (기본값: 2000ms)
      * 지수 백오프로 인한 과도한 대기 시간을 제한하여 응답성을 보장한다.
      */
-    private static long _maxInterval = 2000;
+    private static long maxInterval = 2000;
 
     /**
      * 재시도 최대 횟수를 동적으로 변경하는 설정 메서드
      * 애플리케이션 운영 중 네트워크 환경에 따라 재시도 정책을 조정할 수 있다.
      */
     public static void setMaxAttempts(int maxAttempts) {
-        _maxAttempts = maxAttempts;
+        RetryableUrlResource.maxAttempts = maxAttempts;
     }
 
     /**
@@ -62,7 +62,7 @@ public class RetryableUrlResource extends UrlResource {
      * 네트워크 지연 특성에 맞춰 첫 재시도 타이밍을 최적화할 수 있다.
      */
     public static void setInitialInterval(long initialInterval) {
-        _initialInterval = initialInterval;
+        RetryableUrlResource.initialInterval = initialInterval;
     }
 
     /**
@@ -70,7 +70,7 @@ public class RetryableUrlResource extends UrlResource {
      * 서버 부하 상황에 따라 백오프 강도를 조절하여 시스템 안정성을 확보한다.
      */
     public static void setMultiplier(double multiplier) {
-        _multiplier = multiplier;
+        RetryableUrlResource.multiplier = multiplier;
     }
 
     /**
@@ -78,7 +78,7 @@ public class RetryableUrlResource extends UrlResource {
      * 최대 대기 시간을 제한하여 사용자 경험과 시스템 응답성의 균형을 맞춘다.
      */
     public static void setMaxInterval(long maxInterval) {
-        _maxInterval = maxInterval;
+        RetryableUrlResource.maxInterval = maxInterval;
     }
 
     /**
@@ -134,14 +134,14 @@ public class RetryableUrlResource extends UrlResource {
     private void init() {
         // 지수 백오프 정책 객체 생성 및 설정
         ExponentialBackOffPolicy policy = new ExponentialBackOffPolicy();
-        policy.setInitialInterval(_initialInterval);  // 첫 재시도 대기 시간 설정
-        policy.setMultiplier(_multiplier);            // 재시도 간격 증가 배수 설정
-        policy.setMaxInterval(_maxInterval);          // 최대 재시도 간격 제한 설정
+        policy.setInitialInterval(initialInterval);  // 첫 재시도 대기 시간 설정
+        policy.setMultiplier(multiplier);            // 재시도 간격 증가 배수 설정
+        policy.setMaxInterval(maxInterval);          // 최대 재시도 간격 제한 설정
 
         // RetryTemplate 빌더 패턴으로 재시도 정책 구성
         this.retryTemplate = RetryTemplate.builder()
                 .retryOn(RetryIOException.class)      // RetryIOException 발생 시에만 재시도
-                .maxAttempts(_maxAttempts)            // 최대 재시도 횟수 설정
+                .maxAttempts(maxAttempts)            // 최대 재시도 횟수 설정
                 .customBackoff(policy)               // 커스텀 백오프 정책 적용
                 .build();
     }
