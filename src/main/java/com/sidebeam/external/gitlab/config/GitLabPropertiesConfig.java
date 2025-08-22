@@ -55,31 +55,37 @@ public class GitLabPropertiesConfig {
         }
     }
 
+    // 테스트 편의를 위한 오버로드: 기존 시그니처 유지 (스프링 바인딩과 무관)
+    public GitLabProperties gitLabPropertiesFromYml(GitLabApiProperties ignored) {
+        try {
+            String configPath = "classpath:application.yml";
+            return PropertyUtil.getYmlProperties(configPath, "gitlab", GitLabProperties.class);
+        } catch (Exception e) {
+            log.error("테스트용 gitLabPropertiesFromYml 로드 중 오류: {}", e.getMessage(), e);
+            return new GitLabProperties();
+        }
+    }
+
+    // 테스트 편의를 위한 오버로드: 기존 시그니처 유지 (스프링 바인딩과 무관)
+    public WebhookProperties webhookPropertiesFromYml() {
+        try {
+            String configPath = "classpath:application.yml";
+            return PropertyUtil.getYmlProperties(configPath, "webhook", WebhookProperties.class);
+        } catch (Exception e) {
+            log.error("테스트용 webhookPropertiesFromYml 로드 중 오류: {}", e.getMessage(), e);
+            return new WebhookProperties();
+        }
+    }
+
     /**
      * PropertyUtil을 사용하여 GitLab 속성을 초기화합니다.
      * application.yml의 gitlab 섹션에서 설정을 로드하고,
      * 루트 그룹으로부터 모든 하위 그룹과 프로젝트를 조회하여 bookmarkProjects를 초기화합니다.
      */
     @Bean
-    public GitLabProperties gitLabPropertiesFromYml(GitLabApiProperties gitLabApiProperties) {
-        log.info("PropertyUtil을 사용하여 GitLab 속성을 초기화합니다.");
-
-        try {
-            // PropertyUtil.getYmlProperties를 사용하여 application.yml에서 gitlab 섹션 로드
-            String configPath = "classpath:application.yml";
-            GitLabProperties properties = PropertyUtil.getYmlProperties(configPath, "gitlab", GitLabProperties.class);
-
-            log.info("GitLab 속성이 PropertyUtil을 통해 성공적으로 로드되었습니다.");
-            return properties;
-
-        } catch (Exception e) {
-            log.error("PropertyUtil을 사용한 GitLab 속성 로드 중 오류 발생: {}", e.getMessage(), e);
-
-            // 오류 발생 시 기본값으로 초기화된 객체 반환
-            GitLabProperties defaultProperties = new GitLabProperties();
-            log.warn("기본값으로 GitLab 속성을 초기화했습니다.");
-            return defaultProperties;
-        }
+    public GitLabProperties gitLabPropertiesFromYml(GitLabProperties gitLabProperties) {
+        log.info("Spring @ConfigurationProperties 바인딩을 통해 GitLab 속성을 초기화합니다 (Jasypt 적용됨).");
+        return gitLabProperties;
     }
 
     /**
@@ -89,24 +95,8 @@ public class GitLabPropertiesConfig {
      * @return WebhookProperties 인스턴스
      */
     @Bean
-    public WebhookProperties webhookPropertiesFromYml() {
-        log.info("PropertyUtil을 사용하여 Webhook 속성을 초기화합니다.");
-
-        try {
-            // PropertyUtil.getYmlProperties를 사용하여 application.yml에서 webhook 섹션 로드
-            String configPath = "classpath:application.yml";
-            WebhookProperties properties = PropertyUtil.getYmlProperties(configPath, "webhook", WebhookProperties.class);
-
-            log.info("Webhook 속성이 PropertyUtil을 통해 성공적으로 로드되었습니다.");
-            return properties;
-
-        } catch (Exception e) {
-            log.error("PropertyUtil을 사용한 Webhook 속성 로드 중 오류 발생: {}", e.getMessage(), e);
-
-            // 오류 발생 시 기본값으로 초기화된 객체 반환
-            WebhookProperties defaultProperties = new WebhookProperties();
-            log.warn("기본값으로 Webhook 속성을 초기화했습니다.");
-            return defaultProperties;
-        }
+    public WebhookProperties webhookPropertiesFromYml(WebhookProperties webhookProperties) {
+        log.info("Spring @ConfigurationProperties 바인딩을 통해 Webhook 속성을 초기화합니다 (Jasypt 적용됨).");
+        return webhookProperties;
     }
 }

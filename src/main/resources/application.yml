@@ -124,7 +124,7 @@ jasypt:
     pool-size: 1
     # 솔트 생성기 (기본값: org.jasypt.salt.RandomSaltGenerator)
     salt-generator-classname: org.jasypt.salt.RandomSaltGenerator
-    # IV 생성기 (기본값: org.jasypt.iv.RandomIvGenerator) 
+    # IV 생성기 (기본값: org.jasypt.iv.RandomIvGenerator)
     iv-generator-classname: org.jasypt.iv.RandomIvGenerator
     # 문자열 출력 타입 (기본값: base64)
     string-output-type: base64
