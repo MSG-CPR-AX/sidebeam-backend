@@ -35,7 +35,7 @@ public class BookmarkServiceImpl implements BookmarkService {
 
     private final GitLabService gitLabService;
     private final SchemaValidationService schemaValidationService;
-    private final BookmarkValidator bookMarkValidator;
+    private final BookmarkValidator bookmarkValidator;
     private final ObjectMapper yamlMapper;
 
     /**
@@ -52,10 +52,10 @@ public class BookmarkServiceImpl implements BookmarkService {
     @Autowired @Lazy
     private BookmarkService self;
 
-    public BookmarkServiceImpl(GitLabService gitLabService, SchemaValidationService schemaValidationService, BookmarkValidator bookMarkValidator) {
+    public BookmarkServiceImpl(GitLabService gitLabService, SchemaValidationService schemaValidationService, BookmarkValidator bookmarkValidator) {
         this.gitLabService = gitLabService;
         this.schemaValidationService = schemaValidationService;
-        this.bookMarkValidator = bookMarkValidator;
+        this.bookmarkValidator = bookmarkValidator;
         this.yamlMapper = new ObjectMapper(new YAMLFactory());
     }
 
@@ -91,7 +91,7 @@ public class BookmarkServiceImpl implements BookmarkService {
         }
 
         // 중복 URL 존재 유무 검증
-        bookMarkValidator.checkDuplicateUrls(bookmarks);
+        bookmarkValidator.checkDuplicateUrls(bookmarks);
 
         log.debug("Fetched {} bookmarks from {} files", bookmarks.size(), allFilesContent.fileContents().size());
         return BookmarkMapper.INSTANCE.toDto(bookmarks);
