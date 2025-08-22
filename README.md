@@ -17,8 +17,8 @@ Spring Boot 3 기반의 사이드바 백엔드 애플리케이션입니다.
 
 ### 사전 요구사항
 
-- Java 21
-- Gradle 8.x
+- Java 24
+- Gradle 9.x
 - GitLab 개인 액세스 토큰 (read_repository 권한)
 
 ### 실행 방법

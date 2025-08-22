@@ -21,7 +21,7 @@ val springdocVersion = "2.8.9"
 val mapstructVersion = "1.6.3"
 val jsonOrgVersion = "20250517"
 val archunitVersion = "1.4.1"
-val nettyDnsNativeVersion = "4.1.76.Final"
+val nettyDnsNativeVersion = "4.2.4.Final"
 val jacksonBomVersion = "2.17.2"
 val jaxrsVersion = "4.0.0"
 val jsonSchemaVersion = "1.5.1"
@@ -96,6 +96,10 @@ dependencies {
 
     // TestAnnotationProcessor
     testAnnotationProcessor("org.projectlombok:lombok")
+}
+
+configurations.configureEach {
+    exclude(group = "commons-logging", module = "commons-logging")
 }
 
 tasks.test {
