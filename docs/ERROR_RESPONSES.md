@@ -1,11 +1,11 @@
-# Error Response Schema Documentation
+# 오류 응답 스키마 문서
 
-## Overview
-This document describes the standardized error response format used throughout the Sidebar Backend API, including error codes, response structure, and examples.
+## 개요
+이 문서는 Sidebar Backend API 전반에서 사용되는 표준화된 오류 응답 형식을 설명하며, 오류 코드, 응답 구조 및 예제를 포함합니다.
 
-## Standard Response Format
+## 표준 응답 형식
 
-### Success Response
+### 성공 응답
 ```json
 {
   "success": true,
@@ -15,7 +15,7 @@ This document describes the standardized error response format used throughout t
 }
 ```
 
-### Error Response
+### 오류 응답
 ```json
 {
   "success": false,
@@ -29,29 +29,29 @@ This document describes the standardized error response format used throughout t
 }
 ```
 
-## Error Codes
+## 오류 코드
 
-### Technical Errors
-- `VALIDATION_ERROR` (400): Request validation failed
-- `UNAUTHORIZED` (401): Authentication required or failed
-- `FORBIDDEN` (403): Access denied
-- `NOT_FOUND` (404): Resource not found
-- `CONFLICT` (409): Resource conflict
-- `INTERNAL_SERVER_ERROR` (500): Internal system error
+### 기술적 오류
+- `VALIDATION_ERROR` (400): 요청 검증 실패
+- `UNAUTHORIZED` (401): 인증 필요 또는 실패
+- `FORBIDDEN` (403): 접근 거부
+- `NOT_FOUND` (404): 리소스를 찾을 수 없음
+- `CONFLICT` (409): 리소스 충돌
+- `INTERNAL_SERVER_ERROR` (500): 내부 시스템 오류
 
-### Domain Errors
-- `BUSINESS_RULE_VIOLATION` (422): Business logic constraint violated
-- `EXTERNAL_SERVICE_ERROR` (502): External service failure
-- `EXTERNAL_SERVICE_TIMEOUT` (504): External service timeout
+### 도메인 오류
+- `BUSINESS_RULE_VIOLATION` (422): 비즈니스 로직 제약 조건 위반
+- `EXTERNAL_SERVICE_ERROR` (502): 외부 서비스 장애
+- `EXTERNAL_SERVICE_TIMEOUT` (504): 외부 서비스 타임아웃
 
-### GitLab Integration Errors
-- `GITLAB_API_ERROR` (502): GitLab API communication error
-- `GITLAB_AUTHENTICATION_ERROR` (401): GitLab token invalid
-- `GITLAB_RATE_LIMIT` (429): GitLab rate limit exceeded
+### GitLab 통합 오류
+- `GITLAB_API_ERROR` (502): GitLab API 통신 오류
+- `GITLAB_AUTHENTICATION_ERROR` (401): GitLab 토큰 유효하지 않음
+- `GITLAB_RATE_LIMIT` (429): GitLab 요청 제한 초과
 
-## Error Details Schema
+## 오류 세부사항 스키마
 
-### Field Validation Errors
+### 필드 검증 오류
 ```json
 {
   "details": {
@@ -70,7 +70,7 @@ This document describes the standardized error response format used throughout t
 }
 ```
 
-### Business Rule Violations
+### 비즈니스 규칙 위반
 ```json
 {
   "details": {
@@ -84,7 +84,7 @@ This document describes the standardized error response format used throughout t
 }
 ```
 
-### External Service Errors
+### 외부 서비스 오류
 ```json
 {
   "details": {
@@ -99,10 +99,10 @@ This document describes the standardized error response format used throughout t
 }
 ```
 
-## HTTP Status Code Mapping
+## HTTP 상태 코드 매핑
 
-| Error Code | HTTP Status | Description |
-|------------|-------------|-------------|
+| 오류 코드 | HTTP 상태 | 설명 |
+|-----------|-----------|------|
 | `VALIDATION_ERROR` | 400 | Bad Request |
 | `UNAUTHORIZED` | 401 | Unauthorized |
 | `FORBIDDEN` | 403 | Forbidden |
@@ -114,10 +114,10 @@ This document describes the standardized error response format used throughout t
 | `EXTERNAL_SERVICE_ERROR` | 502 | Bad Gateway |
 | `EXTERNAL_SERVICE_TIMEOUT` | 504 | Gateway Timeout |
 
-## Complete Error Examples
+## 완전한 오류 예제
 
-### 1. Validation Error
-**Request:**
+### 1. 검증 오류
+**요청:**
 ```http
 POST /api/bookmarks
 Content-Type: application/json
@@ -128,7 +128,7 @@ Content-Type: application/json
 }
 ```
 
-**Response:**
+**응답:**
 ```http
 HTTP/1.1 400 Bad Request
 Content-Type: application/json
@@ -157,14 +157,14 @@ Content-Type: application/json
 }
 ```
 
-### 2. Authentication Error
-**Request:**
+### 2. 인증 오류
+**요청:**
 ```http
 GET /api/bookmarks
 X-Api-Key: invalid-key
 ```
 
-**Response:**
+**응답:**
 ```http
 HTTP/1.1 401 Unauthorized
 Content-Type: application/json
@@ -185,8 +185,8 @@ Content-Type: application/json
 }
 ```
 
-### 3. Webhook Signature Error
-**Request:**
+### 3. 웹훅 서명 오류
+**요청:**
 ```http
 POST /webhook/gitlab
 X-Gitlab-Token: invalid-signature
@@ -197,7 +197,7 @@ Content-Type: application/json
 }
 ```
 
-**Response:**
+**응답:**
 ```http
 HTTP/1.1 401 Unauthorized
 Content-Type: application/json
@@ -217,13 +217,13 @@ Content-Type: application/json
 }
 ```
 
-### 4. GitLab API Error
-**Request:**
+### 4. GitLab API 오류
+**요청:**
 ```http
 GET /api/bookmarks/refresh
 ```
 
-**Response:**
+**응답:**
 ```http
 HTTP/1.1 502 Bad Gateway
 Content-Type: application/json
@@ -249,13 +249,13 @@ Content-Type: application/json
 }
 ```
 
-### 5. Circuit Breaker Open
-**Request:**
+### 5. 회로 차단기 열림
+**요청:**
 ```http
 GET /api/bookmarks
 ```
 
-**Response:**
+**응답:**
 ```http
 HTTP/1.1 503 Service Unavailable
 Content-Type: application/json
@@ -280,30 +280,30 @@ Content-Type: application/json
 }
 ```
 
-## Error Handling Best Practices
+## 오류 처리 모범 사례
 
-### For API Consumers
-1. Always check the `success` field first
-2. Use `correlationId` for support requests
-3. Handle different error codes appropriately
-4. Implement retry logic for 5xx errors with exponential backoff
-5. Display user-friendly messages from the `message` field
+### API 사용자를 위한 지침
+1. 항상 `success` 필드를 먼저 확인
+2. 지원 요청 시 `correlationId` 사용
+3. 다양한 오류 코드를 적절히 처리
+4. 지수 백오프를 사용하여 5xx 오류에 대한 재시도 로직 구현
+5. `message` 필드의 사용자 친화적 메시지 표시
 
-### For Monitoring
-1. Alert on error rate thresholds
-2. Track error codes and their frequencies
-3. Monitor correlation between errors and external service health
-4. Use correlation IDs for distributed tracing
+### 모니터링을 위한 지침
+1. 오류율 임계값에 대한 알림 설정
+2. 오류 코드 및 빈도 추적
+3. 오류와 외부 서비스 상태 간의 상관관계 모니터링
+4. 분산 추적을 위한 상관관계 ID 사용
 
-## Error Response Headers
-All error responses include these headers for debugging:
-- `X-Correlation-Id`: Request correlation ID
-- `X-Request-Id`: Request-specific ID
+## 오류 응답 헤더
+모든 오류 응답에는 디버깅을 위한 다음 헤더가 포함됩니다:
+- `X-Correlation-Id`: 요청 상관관계 ID
+- `X-Request-Id`: 요청별 ID
 - `Content-Type`: application/json
 
-## Support and Troubleshooting
-When reporting issues, always include:
-- The complete error response
-- The correlation ID from the error details
-- The timestamp when the error occurred
-- The original request that caused the error
+## 지원 및 문제 해결
+문제를 보고할 때는 항상 다음을 포함하세요:
+- 완전한 오류 응답
+- 오류 세부사항의 상관관계 ID
+- 오류가 발생한 시간
+- 오류를 발생시킨 원본 요청
