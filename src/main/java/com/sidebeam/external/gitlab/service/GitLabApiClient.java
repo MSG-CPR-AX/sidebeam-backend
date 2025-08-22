@@ -122,6 +122,7 @@ public class GitLabApiClient {
                 .doOnNext(project -> log.debug("프로젝트 수신: ID={}, Name={}", project.id(), project.name()))
                 .doOnComplete(() -> log.debug("모든 프로젝트 조회 완료 - groupId: {}", groupId))
                 .doOnError(error -> log.error("전체 프로젝트 조회 실패 - groupId: {}", groupId, error));
+
         return retryPolicy.withRetry(call, "getProjectIdListByGroupId")
                 .onErrorMap(throwable -> mapError("getProjectIdListByGroupId", throwable));
     }
