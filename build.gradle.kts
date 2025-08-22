@@ -2,6 +2,7 @@ plugins {
     id("java")
     id("org.springframework.boot") version "3.5.4"
     id("io.spring.dependency-management") version "1.1.7"
+    id("jacoco")
 }
 
 group = "com.sidebeam"
@@ -25,6 +26,7 @@ val jacksonBomVersion = "2.17.2"
 val jaxrsVersion = "4.0.0"
 val jsonSchemaVersion = "1.5.1"
 val junitBomVersion = "5.13.4"
+val logbackVersion = "8.0"
 
 dependencies {
     // Implementation
@@ -35,6 +37,7 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-webflux")
     implementation("org.springframework.boot:spring-boot-starter-security")
     implementation("org.springframework.boot:spring-boot-starter-aop")
+    implementation("org.springframework.boot:spring-boot-starter-actuator")
 
     // Core/Infra
     implementation("org.springframework.retry:spring-retry")
@@ -63,6 +66,9 @@ dependencies {
 
     // API Documentation
     implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:$springdocVersion")
+
+    // Structured Logging
+    implementation("net.logstash.logback:logstash-logback-encoder:$logbackVersion")
 
     // CompileOnly
     compileOnly("org.projectlombok:lombok")
@@ -96,4 +102,32 @@ tasks.test {
     useJUnitPlatform()
     // Pass system properties to test JVM
     systemProperties(System.getProperties().toMap() as Map<String, Any>)
+    finalizedBy(tasks.jacocoTestReport)
+}
+
+tasks.jacocoTestReport {
+    dependsOn(tasks.test)
+    reports {
+        xml.required.set(true)
+        html.required.set(true)
+        csv.required.set(false)
+    }
+    finalizedBy(tasks.jacocoTestCoverageVerification)
+}
+
+tasks.jacocoTestCoverageVerification {
+    violationRules {
+        rule {
+            limit {
+                minimum = "0.80".toBigDecimal() // 80% line coverage
+            }
+        }
+        rule {
+            limit {
+                counter = "BRANCH"
+                value = "COVEREDRATIO"
+                minimum = "0.70".toBigDecimal() // 70% branch coverage
+            }
+        }
+    }
 }

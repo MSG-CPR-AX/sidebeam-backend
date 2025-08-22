@@ -2,9 +2,11 @@ package com.sidebeam.bookmark.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sidebeam.bookmark.service.BookmarkService;
+import com.sidebeam.common.security.util.SignatureVerifyUtil;
 import com.sidebeam.external.gitlab.config.property.WebhookProperties;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.mockito.MockedStatic;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -40,16 +42,21 @@ class WebhookControllerWebMvcTest {
         // Given
         String body = objectMapper.writeValueAsString(Map.of("event_name", "push"));
 
-        // When / Then
-        mockMvc.perform(post("/webhook/gitlab")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(body)
-                        .header("X-Gitlab-Token", "wrong"))
-                .andExpect(status().isUnauthorized())
-                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$.error.code").value("UNAUTHORIZED"));
+        try (MockedStatic<SignatureVerifyUtil> mockedSignatureUtil = mockStatic(SignatureVerifyUtil.class)) {
+            mockedSignatureUtil.when(() -> SignatureVerifyUtil.verifySignature(any(byte[].class), eq("wrong"), eq("secret")))
+                    .thenReturn(false);
 
-        verifyNoInteractions(bookmarkService);
+            // When / Then
+            mockMvc.perform(post("/webhook/gitlab")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(body)
+                            .header("X-Gitlab-Token", "wrong"))
+                    .andExpect(status().isUnauthorized())
+                    .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                    .andExpect(jsonPath("$.error.code").value("UNAUTHORIZED"));
+
+            verifyNoInteractions(bookmarkService);
+        }
     }
 
     @Test
@@ -58,15 +65,20 @@ class WebhookControllerWebMvcTest {
         // Given
         String body = objectMapper.writeValueAsString(Map.of("event_name", "push"));
 
-        // When / Then
-        mockMvc.perform(post("/webhook/gitlab")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(body))
-                .andExpect(status().isUnauthorized())
-                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$.error.code").value("UNAUTHORIZED"));
+        try (MockedStatic<SignatureVerifyUtil> mockedSignatureUtil = mockStatic(SignatureVerifyUtil.class)) {
+            mockedSignatureUtil.when(() -> SignatureVerifyUtil.verifySignature(any(byte[].class), isNull(), eq("secret")))
+                    .thenReturn(false);
 
-        verifyNoInteractions(bookmarkService);
+            // When / Then
+            mockMvc.perform(post("/webhook/gitlab")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(body))
+                    .andExpect(status().isUnauthorized())
+                    .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                    .andExpect(jsonPath("$.error.code").value("UNAUTHORIZED"));
+
+            verifyNoInteractions(bookmarkService);
+        }
     }
 
     @Test
@@ -76,15 +88,20 @@ class WebhookControllerWebMvcTest {
         doNothing().when(bookmarkService).refreshBookmarks();
         String body = objectMapper.writeValueAsString(Map.of("event_name", "push"));
 
-        // When / Then
-        mockMvc.perform(post("/webhook/gitlab")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(body)
-                        .header("X-Gitlab-Token", "secret"))
-                .andExpect(status().isOk())
-                .andExpect(content().string("Webhook processed successfully"));
+        try (MockedStatic<SignatureVerifyUtil> mockedSignatureUtil = mockStatic(SignatureVerifyUtil.class)) {
+            mockedSignatureUtil.when(() -> SignatureVerifyUtil.verifySignature(any(byte[].class), eq("secret"), eq("secret")))
+                    .thenReturn(true);
 
-        verify(bookmarkService).refreshBookmarks();
+            // When / Then
+            mockMvc.perform(post("/webhook/gitlab")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(body)
+                            .header("X-Gitlab-Token", "secret"))
+                    .andExpect(status().isOk())
+                    .andExpect(content().string("Webhook processed successfully"));
+
+            verify(bookmarkService).refreshBookmarks();
+        }
     }
 
     @Test
@@ -94,16 +111,21 @@ class WebhookControllerWebMvcTest {
         doThrow(new RuntimeException("Service error")).when(bookmarkService).refreshBookmarks();
         String body = objectMapper.writeValueAsString(Map.of("event_name", "push"));
 
-        // When / Then
-        mockMvc.perform(post("/webhook/gitlab")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(body)
-                        .header("X-Gitlab-Token", "secret"))
-                .andExpect(status().isInternalServerError())
-                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$.error.code").value("INTERNAL_SERVER_ERROR"));
+        try (MockedStatic<SignatureVerifyUtil> mockedSignatureUtil = mockStatic(SignatureVerifyUtil.class)) {
+            mockedSignatureUtil.when(() -> SignatureVerifyUtil.verifySignature(any(byte[].class), eq("secret"), eq("secret")))
+                    .thenReturn(true);
 
-        verify(bookmarkService).refreshBookmarks();
+            // When / Then
+            mockMvc.perform(post("/webhook/gitlab")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(body)
+                            .header("X-Gitlab-Token", "secret"))
+                    .andExpect(status().isInternalServerError())
+                    .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                    .andExpect(jsonPath("$.error.code").value("INTERNAL_SERVER_ERROR"));
+
+            verify(bookmarkService).refreshBookmarks();
+        }
     }
 
     @Test
@@ -113,18 +135,23 @@ class WebhookControllerWebMvcTest {
         doNothing().when(bookmarkService).refreshBookmarks();
         String[] events = {"push", "merge_request", "tag_push", "unknown"};
 
-        for (String eventType : events) {
-            // When / Then
-            String body = objectMapper.writeValueAsString(Map.of("event_name", eventType));
-            
-            mockMvc.perform(post("/webhook/gitlab")
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content(body)
-                            .header("X-Gitlab-Token", "secret"))
-                    .andExpect(status().isOk())
-                    .andExpect(content().string("Webhook processed successfully"));
-        }
+        try (MockedStatic<SignatureVerifyUtil> mockedSignatureUtil = mockStatic(SignatureVerifyUtil.class)) {
+            mockedSignatureUtil.when(() -> SignatureVerifyUtil.verifySignature(any(byte[].class), eq("secret"), eq("secret")))
+                    .thenReturn(true);
 
-        verify(bookmarkService, times(events.length)).refreshBookmarks();
+            for (String eventType : events) {
+                // When / Then
+                String body = objectMapper.writeValueAsString(Map.of("event_name", eventType));
+                
+                mockMvc.perform(post("/webhook/gitlab")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(body)
+                                .header("X-Gitlab-Token", "secret"))
+                        .andExpect(status().isOk())
+                        .andExpect(content().string("Webhook processed successfully"));
+            }
+
+            verify(bookmarkService, times(events.length)).refreshBookmarks();
+        }
     }
 }
