@@ -43,6 +43,9 @@ dependencies {
     implementation("org.springframework.retry:spring-retry")
     implementation("com.github.ulisesbocchio:jasypt-spring-boot-starter:$jasyptVersion")
 
+    // Caffeine Cache
+    implementation("com.github.ben-manes.caffeine:caffeine")
+
     // Resilience4j
     implementation(platform("io.github.resilience4j:resilience4j-bom:$resilience4jBomVersion"))
     implementation("io.github.resilience4j:resilience4j-spring-boot3")
