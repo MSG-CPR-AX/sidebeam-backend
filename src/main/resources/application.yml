@@ -6,7 +6,7 @@ spring:
   application:
     name: sidebar-backend
   cache:
-    type: simple
+    type: caffeine
   main:
     web-application-type: servlet
 
