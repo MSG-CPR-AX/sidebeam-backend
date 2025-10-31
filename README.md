@@ -4,7 +4,7 @@
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.5.4-brightgreen.svg)](https://spring.io/projects/spring-boot)
 [![Gradle](https://img.shields.io/badge/Gradle-9.0.0-yellow.svg)](https://gradle.org/)
 
-`sidebar-backend`는 GitLab 리포지토리에서 북마크 데이터를 가져와 API 형태로 제공하는 고성능 백엔드 애플리케이션입니다.
+`sidebeam-backend`는 GitLab 리포지토리에서 북마크 데이터를 가져와 API 형태로 제공하는 백엔드 애플리케이션입니다.
 
 ## 1. 🎯 핵심 아키텍처 철학
 
